@@ -24,6 +24,7 @@ import argparse
 import json
 import sys
 from collections import OrderedDict
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -164,6 +165,7 @@ def main():
 
     writer = None
     if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(args.out, fourcc, fps, (w, h))
 

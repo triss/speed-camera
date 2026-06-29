@@ -14,6 +14,7 @@ Usage:
 """
 import argparse
 import json
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -54,8 +55,11 @@ def main():
     duration = travel / speed_mps
     n_frames = int(duration * args.fps)
 
+    out_stem = Path(args.out)
+    out_stem.parent.mkdir(parents=True, exist_ok=True)
+
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    vw = cv2.VideoWriter(f"{args.out}.mp4", fourcc, args.fps, (W, H))
+    vw = cv2.VideoWriter(str(out_stem.with_suffix(".mp4")), fourcc, args.fps, (W, H))
 
     def project(pt_world):
         src = np.array([[[pt_world[0], pt_world[1]]]], dtype=np.float32)
@@ -90,7 +94,7 @@ def main():
         "min_area": 150,
         "speed_window_s": 0.2,
     }
-    with open(f"{args.out}.json", "w") as f:
+    with open(out_stem.with_suffix(".json"), "w") as f:
         json.dump(calib, f, indent=2)
 
     print(f"Wrote {args.out}.mp4 ({n_frames} frames, {duration:.2f}s) "
