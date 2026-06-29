@@ -72,3 +72,15 @@ python src/stable_capture.py --out clips/calib.jpg --stable-s 30
 
 This uses accelerometer/gyroscope readings only to decide when the phone has
 stopped moving. The saved still is for the later visual calibration step.
+
+To mark calibration points on the phone, serve the repo and open the tap-based
+calibration page in Chrome:
+
+```bash
+python -m http.server 8000
+# then open:
+# http://127.0.0.1:8000/src/calibrate_points.html?image=/clips/calib.jpg
+```
+
+Tap known road points on the image, enter their matching real-world metre
+coordinates, then copy the generated JSON into a calibration file.

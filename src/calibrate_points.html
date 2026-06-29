@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calibration Points</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+    }
+
+    header {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    input, button {
+      min-height: 42px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #222;
+      color: #eee;
+      font: inherit;
+    }
+
+    button {
+      padding: 0 12px;
+    }
+
+    #imagePath {
+      min-width: 0;
+      flex: 1;
+      padding: 0 10px;
+    }
+
+    #stage {
+      width: 100%;
+      max-height: 62vh;
+      border: 1px solid #333;
+      background: #050505;
+      touch-action: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border-bottom: 1px solid #333;
+      padding: 6px 4px;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    td input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0 8px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      box-sizing: border-box;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #181818;
+      color: #eee;
+      font: 13px ui-monospace, monospace;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <input id="imagePath" value="../clips/calib.jpg" aria-label="image path">
+    <button id="load">Load</button>
+  </header>
+
+  <canvas id="stage"></canvas>
+
+  <div class="actions">
+    <button id="undo">Undo</button>
+    <button id="clear">Clear</button>
+    <button id="copy">Copy JSON</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>image x,y</th>
+        <th>world X m</th>
+        <th>world Y m</th>
+      </tr>
+    </thead>
+    <tbody id="points"></tbody>
+  </table>
+
+  <textarea id="json" readonly></textarea>
+
+  <script>
+    const canvas = document.querySelector("#stage");
+    const ctx = canvas.getContext("2d");
+    const imagePath = document.querySelector("#imagePath");
+    const pointsBody = document.querySelector("#points");
+    const jsonBox = document.querySelector("#json");
+    const img = new Image();
+    const points = [];
+
+    function queryImagePath() {
+      const params = new URLSearchParams(location.search);
+      return params.get("image");
+    }
+
+    function resizeCanvas() {
+      if (!img.naturalWidth) return;
+
+      const maxWidth = document.body.clientWidth - 24;
+      const maxHeight = Math.floor(window.innerHeight * 0.62);
+      const scale = Math.min(maxWidth / img.naturalWidth, maxHeight / img.naturalHeight);
+      canvas.width = Math.max(1, Math.floor(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.floor(img.naturalHeight * scale));
+      draw();
+    }
+
+    function imagePointFromEvent(event) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = img.naturalWidth / rect.width;
+      const scaleY = img.naturalHeight / rect.height;
+      return [
+        Math.round((event.clientX - rect.left) * scaleX),
+        Math.round((event.clientY - rect.top) * scaleY),
+      ];
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!img.naturalWidth) return;
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const sx = canvas.width / img.naturalWidth;
+      const sy = canvas.height / img.naturalHeight;
+
+      points.forEach((point, index) => {
+        const x = point.image[0] * sx;
+        const y = point.image[1] * sy;
+        ctx.beginPath();
+        ctx.arc(x, y, 12, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffcc00";
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#111";
+        ctx.stroke();
+
+        ctx.fillStyle = "#111";
+        ctx.font = "bold 14px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(index + 1), x, y);
+      });
+    }
+
+    function calibrationJson() {
+      return {
+        image_points: points.map((point) => point.image),
+        world_points: points.map((point) => [
+          Number(point.world[0] || 0),
+          Number(point.world[1] || 0),
+        ]),
+        min_area: 500,
+        speed_window_s: 0.25,
+      };
+    }
+
+    function update() {
+      pointsBody.replaceChildren();
+      points.forEach((point, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${point.image[0]}, ${point.image[1]}</td>
+          <td><input inputmode="decimal" value="${point.world[0]}" data-index="${index}" data-axis="0"></td>
+          <td><input inputmode="decimal" value="${point.world[1]}" data-index="${index}" data-axis="1"></td>
+        `;
+        pointsBody.append(row);
+      });
+      jsonBox.value = JSON.stringify(calibrationJson(), null, 2);
+      draw();
+    }
+
+    function loadImage() {
+      img.onload = resizeCanvas;
+      img.onerror = () => alert(`Could not load ${imagePath.value}`);
+      img.src = imagePath.value;
+    }
+
+    canvas.addEventListener("pointerdown", (event) => {
+      if (!img.naturalWidth) return;
+      points.push({ image: imagePointFromEvent(event), world: ["", ""] });
+      update();
+    });
+
+    pointsBody.addEventListener("input", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement)) return;
+      points[Number(input.dataset.index)].world[Number(input.dataset.axis)] = input.value;
+      jsonBox.value = JSON.stringify(calibrationJson(), null, 2);
+    });
+
+    document.querySelector("#load").addEventListener("click", loadImage);
+    document.querySelector("#undo").addEventListener("click", () => {
+      points.pop();
+      update();
+    });
+    document.querySelector("#clear").addEventListener("click", () => {
+      points.length = 0;
+      update();
+    });
+    document.querySelector("#copy").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(jsonBox.value);
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    imagePath.value = queryImagePath() || imagePath.value;
+    loadImage();
+    update();
+  </script>
+</body>
+</html>
