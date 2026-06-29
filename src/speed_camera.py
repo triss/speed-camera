@@ -194,7 +194,13 @@ def main():
             if cv2.contourArea(c) < min_area:
                 continue
             x, y, bw, bh = cv2.boundingRect(c)
-            centroids.append((x + bw / 2.0, y + bh / 2.0))
+            # Track the GROUND-CONTACT point (bottom-centre of the box), not the
+            # box centre. The homography is only valid on the road plane; the box
+            # centre floats above it, so under perspective it maps to a world
+            # position that drifts with distance and compresses the trajectory
+            # (~7% speed under-read). The bottom edge — where tyres meet road —
+            # lies on the plane and projects correctly.
+            centroids.append((x + bw / 2.0, y + bh))
 
         objects = tracker.update(centroids)
         for oid, (cx, cy) in objects.items():

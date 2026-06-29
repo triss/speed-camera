@@ -29,8 +29,10 @@ python src/speed_camera.py --video clips/test30.mp4 --calib clips/test30.json \
     --out out/test30_annot.mp4
 ```
 
-On the synthetic clips the estimator currently reads ~6–7% low — a consistent
-(so calibratable) bias, suspected to be MOG2 background warm-up on short clips.
+On the synthetic clips the estimator reads within ~1.5% of ground truth. (An
+earlier ~7% under-read came from projecting the bounding-box centre, which
+floats above the road plane the homography is calibrated on; tracking the
+ground-contact point — bottom-centre of the box — fixed it.)
 
 ## Calibration
 
