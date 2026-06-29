@@ -61,3 +61,14 @@ python src/env_check.py     # verify the build can do mp4 I/O
 
 Because OpenCV is a system package there, run against system Python, or create
 the venv with `--system-site-packages` so it can see `cv2`.
+
+For a first phone-stability probe, install the Termux API helper and capture a
+calibration still after the phone has held the same pose for 30 seconds:
+
+```bash
+pkg install termux-api
+python src/stable_capture.py --out clips/calib.jpg --stable-s 30
+```
+
+This uses accelerometer/gyroscope readings only to decide when the phone has
+stopped moving. The saved still is for the later visual calibration step.
