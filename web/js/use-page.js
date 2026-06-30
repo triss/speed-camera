@@ -47,9 +47,6 @@ function renderUse() {
 
   document.getElementById("setupList").replaceChildren(textList(use.setup));
   document.getElementById("outputsList").replaceChildren(textList(use.outputs));
-
-  const launch = document.getElementById("launchApp");
-  if (launch) launch.href = `index.html?use=${encodeURIComponent(use.id)}`;
 }
 
 renderUse();

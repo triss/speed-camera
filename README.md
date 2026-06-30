@@ -66,8 +66,11 @@ Under `web/`:
 - `web/check.html` — browser capability probe.
   Reports which required APIs exist on *this* device and measures the camera's
   real resolution + frame rate. **Run this first on any candidate phone.**
-- `web/index.html` — app scaffold: live capture feeds the engine pipeline and
-  the "Engine readout" panel shows the active use's contract and live output.
+- `web/index.html` — project overview and document index.
+- `web/speed.html`, `web/count.html`, `web/dwell.html`, `web/wildlife.html`,
+  `web/environment.html` — one page per engine use. Each page contains its own
+  camera scaffold, live engine readout, local observation count, and CSV/JSON
+  sharing controls.
 - `web/js/engine/` — the engine, as composable components: `gray`, `detect`
   (motion), `track` (ground-contact), `locate` (pluggable backends — only
   `BearingOnly` is implemented; the rest throw "needs calibration/reference"),
@@ -81,9 +84,6 @@ Under `web/`:
   including the count pipeline end-to-end on synthetic frames.
 - `web/pipeline.html` plus `web/pipeline-*.html` — plain-language pages for each
   pipeline technique, each with a small browser demo and links back to the code.
-- `web/speed.html`, `web/count.html`, `web/dwell.html`, `web/wildlife.html`,
-  `web/environment.html` — one page per engine use: sensing mode, locate
-  backend, setup needs and finding outputs.
 - `web/css/`, `web/js/` — split styles and scripts; the check-page JS is strict
   ES5 so the checker itself runs on the old browsers it assesses.
 

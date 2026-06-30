@@ -1,6 +1,6 @@
 "use strict";
 
-import { getUse, listUses } from "./uses/index.js";
+import { getUse } from "./uses/index.js";
 import { toGray } from "./engine/gray.js";
 import { createPipeline } from "./engine/pipeline.js";
 import { openObservationStore } from "./engine/store.js";
@@ -13,9 +13,7 @@ const video = document.getElementById("video");
 const overlay = document.getElementById("overlay");
 const octx = overlay.getContext("2d");
 const status = document.getElementById("status");
-const useSelect = document.getElementById("useSelect");
 const useDescription = document.getElementById("useDescription");
-const useLink = document.getElementById("useLink");
 
 // Engine readout panel — the declared contract + live pipeline status.
 const roMode = document.getElementById("roMode");
@@ -38,7 +36,9 @@ let procH = 240;
 
 let stream = null, running = false, events = 0, findingsTimer = null;
 let observationStore = null;
-let activeUse = getUse(new URLSearchParams(location.search).get("use")) || getUse("speed");
+let activeUse = getUse(document.body.dataset.use)
+  || getUse(new URLSearchParams(location.search).get("use"))
+  || getUse("speed");
 let pipeline = createPipeline(activeUse, { onObservation: persistObservation });
 
 async function persistObservation(observation) {
@@ -51,23 +51,8 @@ async function persistObservation(observation) {
   }
 }
 
-function selectUse(id) {
-  const next = getUse(id);
-  if (!next) return;
-  activeUse = next;
-  pipeline = createPipeline(activeUse, { onObservation: persistObservation });
-  events = 0;
-  syncUseUi();
-  roEvents.textContent = "0";
-  roMeasure.textContent = "awaiting detection…";
-  showFindings(pipeline.findings()); // exercise the API now (empty obs → stub/empty)
-  refreshStoredCount();
-}
-
 function syncUseUi() {
-  useSelect.value = activeUse.id;
-  useDescription.textContent = activeUse.description;
-  useLink.href = `${activeUse.id}.html`;
+  if (useDescription) useDescription.textContent = activeUse.description;
   roMode.textContent = activeUse.mode;
   roLocate.textContent = activeUse.locate;
   roMeasurements.textContent = activeUse.measurements.join(", ");
@@ -214,26 +199,14 @@ function stop() {
   status.textContent = "stopped.";
 }
 
-function installUseOptions() {
-  for (const use of listUses()) {
-    const option = document.createElement("option");
-    option.value = use.id;
-    option.textContent = use.name;
-    useSelect.appendChild(option);
-  }
-}
-
 document.getElementById("start").addEventListener("click", start);
 document.getElementById("stop").addEventListener("click", stop);
 shareObservationsCsv.addEventListener("click", () => shareObservations("csv"));
 shareObservationsJson.addEventListener("click", () => shareObservations("json"));
-useSelect.addEventListener("change", () => {
-  selectUse(useSelect.value);
-  status.textContent = `${activeUse.name} selected. ${activeUse.mode === "change" ? "Change-mode use." : "Camera shows the live pipeline."}`;
-});
 
-installUseOptions();
-selectUse(activeUse.id);
+syncUseUi();
+roMeasure.textContent = "awaiting detection...";
+showFindings(pipeline.findings()); // exercise the API now (empty obs -> stub/empty)
 
 openObservationStore().then((store) => {
   observationStore = store;

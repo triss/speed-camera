@@ -36,11 +36,11 @@
       <dl class="implementation-map">
         <div>
           <dt>Detect difference</dt>
-          <dd><code>web/js/pipeline-demos.js</code>: <code>toGray()</code>, <code>changedRegion()</code>, <code>drawRegion()</code>. <code>web/js/app.js</code>: <code>toGray()</code> and <code>motionEnergy()</code>.</dd>
+          <dd><code>web/js/pipeline-demos.js</code>: <code>toGray()</code>, <code>changedRegion()</code>, <code>drawRegion()</code>. <code>web/js/engine/detect.js</code>: reusable motion detector for the use pages.</dd>
         </div>
         <div>
           <dt>Track identity</dt>
-          <dd><code>web/js/pipeline-demos.js</code>: simple webcam motion-centre trail in <code>drawRegion()</code>. Full identity tracking is still a web TODO in <code>web/js/app.js</code>.</dd>
+          <dd><code>web/js/pipeline-demos.js</code>: simple webcam motion-centre trail in <code>drawRegion()</code>. <code>web/js/engine/track.js</code>: reusable ground-contact tracker for the use pages.</dd>
         </div>
         <div>
           <dt>Locate</dt>
@@ -59,6 +59,7 @@
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/pipeline-demos.js">web/js/pipeline-demos.js</a></li>
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/calibration-points.js">web/js/calibration-points.js</a></li>
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/app.js">web/js/app.js</a></li>
+        <li><a href="https://github.com/triss/lookout/tree/main/web/js/engine">web/js/engine/</a></li>
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/engine/use.js">web/js/engine/use.js</a></li>
         <li><a href="https://github.com/triss/lookout/tree/main/web/js/uses">web/js/uses/</a></li>
       </ul>

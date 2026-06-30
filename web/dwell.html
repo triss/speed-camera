@@ -35,9 +35,40 @@
         <h2 id="outputsHeading">Output Stub</h2>
         <div id="outputsList"></div>
       </section>
-      <a id="launchApp" class="button-link" href="index.html?use=dwell">Open Camera Scaffold</a>
+      <section aria-labelledby="cameraTitle">
+        <h2 id="cameraTitle">Camera Scaffold</h2>
+        <div id="stage">
+          <video id="video" playsinline muted aria-label="Live camera preview"></video>
+          <canvas id="overlay" aria-hidden="true"></canvas>
+        </div>
+
+        <div class="controls">
+          <button id="start" type="button">Start camera</button>
+          <button id="stop" type="button" disabled>Stop</button>
+        </div>
+        <p id="status" role="status" aria-live="polite">Idle. New here? Run the <a href="check.html">capability check</a> first.</p>
+      </section>
+
+      <section class="engine-readout" aria-labelledby="readoutTitle">
+        <h2 id="readoutTitle">Engine readout</h2>
+        <dl class="facts">
+          <div><dt>Sensing mode</dt><dd id="roMode">—</dd></div>
+          <div><dt>Locate backend</dt><dd id="roLocate">—</dd></div>
+          <div><dt>Measurements</dt><dd id="roMeasurements">—</dd></div>
+          <div><dt>Detection events</dt><dd id="roEvents">0</dd></div>
+          <div><dt>Stored observations</dt><dd id="roStored">opening local store...</dd></div>
+          <div><dt>measure()</dt><dd id="roMeasure">idle</dd></div>
+          <div><dt>deriveFindings()</dt><dd id="roFindings">idle</dd></div>
+        </dl>
+        <div class="controls">
+          <button id="shareObservationsCsv" type="button">Share observations CSV</button>
+          <button id="shareObservationsJson" type="button">Share observations JSON</button>
+        </div>
+        <p id="storageStatus" class="note" role="status" aria-live="polite">Opening local observation store...</p>
+      </section>
     </article>
   </main>
   <script type="module" src="js/use-page.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
