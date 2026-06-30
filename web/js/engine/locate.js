@@ -19,6 +19,7 @@ export function createLocator(id, opts = {}) {
 
 function stubLocator(id, reason) {
   return () => ({
+    implemented: false,
     needsCalibration: id === "GroundPlaneHomography",
     locate() { throw new Error(id + ".locate " + reason); },
   });
@@ -27,6 +28,7 @@ function stubLocator(id, reason) {
 // none — identity passthrough. Returns the image-space ground point; no world
 // units. Used by change-mode uses that don't need positioning.
 defineLocate("none", () => ({
+  implemented: true,
   needsCalibration: false,
   locate(track) {
     return { x: track.ground.x, y: track.ground.y, units: "px" };
@@ -38,6 +40,7 @@ defineLocate("none", () => ({
 defineLocate("BearingOnly", (opts = {}) => {
   const hfov = opts.hfov ?? 60; // degrees across the frame width
   return {
+    implemented: true,
     needsCalibration: false,
     locate(track, ctx) {
       const nx = track.ground.x / ctx.width - 0.5; // -0.5 .. 0.5

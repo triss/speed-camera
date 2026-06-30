@@ -3,6 +3,7 @@
 import { getUse, listUses } from "./uses/index.js";
 import { toGray } from "./engine/gray.js";
 import { createPipeline } from "./engine/pipeline.js";
+import { openObservationStore } from "./engine/store.js";
 
 // App scaffold. Live capture → grayscale → engine pipeline → overlay + readout.
 // All pipeline logic now lives in the engine (gray/detect/track/locate/derive,
@@ -23,6 +24,9 @@ const roMeasurements = document.getElementById("roMeasurements");
 const roEvents = document.getElementById("roEvents");
 const roMeasure = document.getElementById("roMeasure");
 const roFindings = document.getElementById("roFindings");
+const roStored = document.getElementById("roStored");
+const exportObservations = document.getElementById("exportObservations");
+const storageStatus = document.getElementById("storageStatus");
 
 // Off-screen buffer we read pixels from (downscaled — CV doesn't need full
 // resolution, and old phones thank you for it).
@@ -32,19 +36,31 @@ const PROC_W = 320; // processing width; height derived from aspect
 let procH = 240;
 
 let stream = null, running = false, events = 0, findingsTimer = null;
+let observationStore = null;
 let activeUse = getUse(new URLSearchParams(location.search).get("use")) || getUse("speed");
-let pipeline = createPipeline(activeUse);
+let pipeline = createPipeline(activeUse, { onObservation: persistObservation });
+
+async function persistObservation(observation) {
+  if (!observationStore) return;
+  try {
+    await observationStore.add(observation);
+    await refreshStoredCount();
+  } catch (e) {
+    storageStatus.textContent = "storage failed: " + e.message;
+  }
+}
 
 function selectUse(id) {
   const next = getUse(id);
   if (!next) return;
   activeUse = next;
-  pipeline = createPipeline(activeUse);
+  pipeline = createPipeline(activeUse, { onObservation: persistObservation });
   events = 0;
   syncUseUi();
   roEvents.textContent = "0";
   roMeasure.textContent = "awaiting detection…";
   showFindings(pipeline.findings()); // exercise the API now (empty obs → stub/empty)
+  refreshStoredCount();
 }
 
 function syncUseUi() {
@@ -66,6 +82,31 @@ function showFindings(f) {
   roFindings.textContent = f.error
     ? "stub — " + f.error + " (" + pipeline.count() + " obs)"
     : pipeline.count() + " obs → " + JSON.stringify(f.value);
+}
+
+async function refreshStoredCount() {
+  if (!observationStore) return;
+  const total = await observationStore.count();
+  const useCount = await observationStore.count({ use: activeUse.id });
+  roStored.textContent = `${useCount} for this use · ${total} total`;
+}
+
+async function downloadObservations() {
+  if (!observationStore) return;
+  try {
+    const json = await observationStore.exportJSON({});
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    a.href = url;
+    a.download = `lookout-observations-${stamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    storageStatus.textContent = "exported observations JSON.";
+  } catch (e) {
+    storageStatus.textContent = "export failed: " + e.message;
+  }
 }
 
 function drawOverlay(energy, bbox) {
@@ -164,6 +205,7 @@ function installUseOptions() {
 
 document.getElementById("start").addEventListener("click", start);
 document.getElementById("stop").addEventListener("click", stop);
+exportObservations.addEventListener("click", downloadObservations);
 useSelect.addEventListener("change", () => {
   selectUse(useSelect.value);
   status.textContent = `${activeUse.name} selected. ${activeUse.mode === "change" ? "Change-mode use." : "Camera shows the live pipeline."}`;
@@ -171,3 +213,11 @@ useSelect.addEventListener("change", () => {
 
 installUseOptions();
 selectUse(activeUse.id);
+
+openObservationStore().then((store) => {
+  observationStore = store;
+  storageStatus.textContent = store.persistent
+    ? "stored locally in this browser."
+    : "local storage unavailable; observations will not persist.";
+  refreshStoredCount();
+});

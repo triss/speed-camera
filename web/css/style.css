@@ -663,7 +663,7 @@ li + li { margin-top: .3rem; }
 
 .engine-readout { margin-top: 1.5rem; }
 
-#roMeasure, #roFindings {
+#roMeasure, #roFindings, #roStored {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .82rem;
 }

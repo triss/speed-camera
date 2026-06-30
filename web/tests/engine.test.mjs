@@ -38,6 +38,12 @@ const cf = cp.findings().value;
 truthy("count: exactly 1 crossing", cf.crossings === 1, JSON.stringify(cf));
 truthy("count: direction = right", cf.byDirection.right === 1 && cf.byDirection.left === 0, JSON.stringify(cf.byDirection));
 
+const persisted = [];
+const cpStored = createPipeline(getUse("count"), { onObservation: (o) => persisted.push(o) });
+t = 0;
+for (let bx = 80; bx <= 240; bx += 8) cpStored.process(frame(bx), { width: W, height: H, t: (t += 50) });
+truthy("pipeline emits persistable observations", persisted.length === 1 && persisted[0].use === "count" && persisted[0].t, JSON.stringify(persisted));
+
 // SPEED: measure stubs (needs calibration), deriveFindings real
 const speed = getUse("speed");
 let speedThrew = false;

@@ -14,6 +14,7 @@ const MAX_OBS = 500;
 
 export function createPipeline(use, opts = {}) {
   const gate = opts.gate ?? 0.012;       // motion energy that counts as a detection
+  const onObservation = opts.onObservation || null;
   const detector = createMotionDetector(opts.detector);
   const tracker = createTracker();
   // Resolve the named locate backend once. change-mode uses ("none") still get
@@ -43,8 +44,10 @@ export function createPipeline(use, opts = {}) {
           // STAGES 3–4: the use locates + measures, given the resolved backend.
           measurement = use.measure(track, ctx, { locate: locator });
           if (measurement) {
-            observations.push({ t: ctx.t, ...measurement });
+            const observation = { use: use.id, t: ctx.t, ...measurement };
+            observations.push(observation);
             if (observations.length > MAX_OBS) observations.shift();
+            if (onObservation) onObservation(observation);
           }
         } catch (e) {
           error = e.message; // stub / needs-calibration surfaces here

@@ -53,9 +53,14 @@
         <div><dt>Locate backend</dt><dd id="roLocate">—</dd></div>
         <div><dt>Measurements</dt><dd id="roMeasurements">—</dd></div>
         <div><dt>Detection events</dt><dd id="roEvents">0</dd></div>
+        <div><dt>Stored observations</dt><dd id="roStored">opening local store…</dd></div>
         <div><dt>measure()</dt><dd id="roMeasure">idle</dd></div>
         <div><dt>deriveFindings()</dt><dd id="roFindings">idle</dd></div>
       </dl>
+      <div class="controls">
+        <button id="exportObservations" type="button">Export observations JSON</button>
+      </div>
+      <p id="storageStatus" class="note" role="status" aria-live="polite">Opening local observation store…</p>
     </section>
   </main>
 
