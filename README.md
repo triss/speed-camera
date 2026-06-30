@@ -158,6 +158,12 @@ order, ≥4 of them. `calibrate_points.html` produces this for you.
 
 ## Web app (experimental)
 
+**Live (GitHub Pages):** https://triss.github.io/speed-camera/ — capability
+check at https://triss.github.io/speed-camera/check.html. Real HTTPS, so the
+camera works on any phone with no local server. The host serves *code only*;
+camera, processing and storage stay on the device. Auto-deploys from `web/` on
+push (`.github/workflows/pages.yml`).
+
 The most portable host for this is the browser: `getUserMedia` abstracts the
 camera across Android, desktop, and even old iPhones via Safari, with zero
 install. Under `web/`:
