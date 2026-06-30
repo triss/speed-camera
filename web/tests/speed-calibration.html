@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · speed calibration tests</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/theme.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="../index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="index.html">Browser tests</a>
+      <a href="../speed.html">Speed</a>
+    </nav>
+  </header>
+  <main id="content">
+    <h1>Speed calibration tests</h1>
+    <p id="testSummary" class="lead">Running...</p>
+    <pre id="testResults" class="demo-log" aria-live="polite"></pre>
+
+    <section class="demo calibration-tool" aria-labelledby="speedCalibrationHeading">
+      <h2 id="speedCalibrationHeading">Fixture</h2>
+      <div class="demo-actions">
+        <button id="startSpeedCalibration" type="button">Start calibration</button>
+        <button id="captureSpeedCalibration" type="button" disabled>Capture now</button>
+        <button id="undoSpeedCalibrationPoint" type="button" disabled>Undo point</button>
+        <button id="clearSpeedCalibration" type="button" disabled>Clear</button>
+      </div>
+      <p id="speedCalibrationStatus" class="demo-output" role="status" aria-live="polite"></p>
+      <p id="speedCalibrationSensorStatus" class="demo-output"></p>
+      <video id="speedCalibrationVideo" playsinline muted hidden></video>
+      <canvas id="speedCalibrationCanvas" class="demo-canvas" aria-label="Speed calibration test canvas"></canvas>
+      <div class="calibration-table-wrap">
+        <table class="calibration-table">
+          <caption>Point pairs and real distances</caption>
+          <thead>
+            <tr>
+              <th scope="col">Pair</th>
+              <th scope="col">Image points</th>
+              <th scope="col">Distance m</th>
+            </tr>
+          </thead>
+          <tbody id="speedCalibrationRows"></tbody>
+        </table>
+      </div>
+      <div class="demo-actions">
+        <button id="copySpeedCalibration" type="button" disabled>Copy calibration JSON</button>
+        <button id="downloadSpeedCalibration" type="button" disabled>Download calibration JSON</button>
+      </div>
+      <label class="visually-hidden" for="speedCalibrationJson">Speed calibration JSON</label>
+      <textarea id="speedCalibrationJson" class="calibration-json" readonly></textarea>
+    </section>
+  </main>
+  <script type="module" src="speed-calibration.test.js"></script>
+</body>
+</html>

@@ -85,6 +85,9 @@ Under `web/`:
   needs calibration, an object-size reference, or the slow-change pipeline.
 - `web/tests/engine.test.mjs` — headless test (`node web/tests/engine.test.mjs`),
   including the count pipeline end-to-end on synthetic frames.
+- `web/tests/index.html` — browser test pages for DOM and handset behaviours;
+  open `web/tests/speed-calibration.html` on a phone to check distance entry and
+  the Android keyboard resize regression.
 - `web/pipeline.html` plus `web/pipeline-*.html` — plain-language pages for each
   pipeline technique, each with a small browser demo and links back to the code.
 - `web/css/`, `web/js/` — split styles and scripts; the check-page JS is strict

@@ -267,6 +267,7 @@ function renderRows() {
     number.textContent = String(pair);
     pointCell.textContent = `${points[i].x},${points[i].y} to ${points[i + 1].x},${points[i + 1].y}`;
     distance.type = "number";
+    distance.inputMode = "decimal";
     distance.step = "0.001";
     distance.min = "0";
     distance.value = points[i].distance_m || "";
@@ -343,8 +344,30 @@ download.addEventListener("click", () => {
 window.addEventListener("resize", () => {
   if (!image) return;
   fitCanvasToImage();
-  render();
+  draw();
 });
+
+if (window.__LOOKOUT_TEST__) {
+  window.__lookoutSpeedCalibrationTestApi = {
+    addPoint(x, y) {
+      points.push({ x, y });
+      render();
+    },
+    seedCapturedFrame(width, height) {
+      stopMonitoring();
+      stopStream();
+      image = { width, height };
+      capturedAt = new Date("2026-01-01T00:00:00.000Z");
+      capturedFrame = document.createElement("canvas");
+      capturedFrame.width = width;
+      capturedFrame.height = height;
+      fitCanvasToImage();
+      start.disabled = false;
+      capture.disabled = true;
+      render();
+    },
+  };
+}
 
 fitCanvasToImage();
 render();
