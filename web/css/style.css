@@ -1,0 +1,65 @@
+/* shared base */
+:root { color-scheme: dark; }
+body {
+  font: 15px/1.5 system-ui, -apple-system, sans-serif;
+  margin: 0; background: #111; color: #eee;
+}
+h1 { margin: 0 0 4px; }
+h2 {
+  font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+  color: #8ab4ff; margin: 22px 0 6px;
+}
+button {
+  min-height: 44px; padding: 0 16px; margin: 4px 6px 4px 0;
+  border: 1px solid #444; border-radius: 7px; background: #222;
+  color: #eee; font: inherit; font-weight: 600;
+}
+button:disabled { opacity: .5; }
+a { color: #8ab4ff; }
+
+/* ── capability check page ── */
+.page-check { padding: 16px; max-width: 760px; margin-left: auto; margin-right: auto; }
+.page-check h1 { font-size: 20px; }
+.sub { color: #999; font-size: 13px; margin-bottom: 16px; word-break: break-all; }
+#verdict {
+  padding: 12px 14px; border-radius: 8px; font-weight: 600;
+  margin-bottom: 14px; border: 1px solid #333;
+}
+.v-ok   { background: #0d2a14; border-color: #1f7a3a; }
+.v-warn { background: #2a230d; border-color: #7a651f; }
+.v-fail { background: #2a0d0d; border-color: #7a1f1f; }
+#log {
+  background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 6px;
+  padding: 10px; font: 12px/1.45 ui-monospace, Menlo, monospace;
+  color: #bcd; white-space: pre-wrap; word-break: break-word;
+  max-height: 240px; overflow: auto; margin: 0;
+}
+.row {
+  display: grid; grid-template-columns: 64px 1fr; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid #222; align-items: start;
+}
+.badge { font-size: 12px; font-weight: 700; text-align: center; padding: 3px 0; border-radius: 5px; }
+.pass { background: #14361f; color: #6ee79b; }
+.warn { background: #363014; color: #e7cf6e; }
+.fail { background: #361414; color: #e76e6e; }
+.name { font-weight: 600; }
+.detail { color: #aaa; font-size: 13px; }
+.gates { color: #777; font-size: 12px; margin-top: 2px; }
+#cam {
+  width: 100%; max-height: 50vh; background: #000;
+  border: 1px solid #333; border-radius: 8px; margin-top: 10px; display: none;
+}
+#camResult { font-size: 14px; margin-top: 8px; white-space: pre-wrap; }
+
+/* ── app page ── */
+.page-app { padding: 12px; }
+.page-app h1 { font-size: 18px; margin: 0 0 8px; }
+#stage {
+  position: relative; width: 100%; background: #000;
+  border: 1px solid #333; border-radius: 8px; overflow: hidden;
+}
+#video { display: block; width: 100%; }
+#overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.controls { margin: 10px 0; }
+#status { color: #9ab; font-size: 14px; min-height: 1.4em; }
+.note { color: #777; font-size: 12px; margin-top: 10px; }
