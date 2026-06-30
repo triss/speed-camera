@@ -24,34 +24,141 @@
   --fail-fg: #ff9b9b;
 }
 
+/* Light default is a low-glare BEIGE, not pure white (#FFF at full luminance
+   is a common eye-strain / visual-stress trigger). Text stays well above the
+   WCAG 4.5:1 contrast floor. Users can override via the data-theme picker. */
 @media (prefers-color-scheme: light) {
-  :root {
-    --bg: #ffffff;
-    --surface: #f6f7f9;
-    --surface-2: #eceff3;
-    --text: #15191f;
-    --muted: #4d5763;
-    --faint: #5f6b78;
-    --line: #c7ced8;
+  :root:not([data-theme]) {
+    --bg: #f2ece0;
+    --surface: #ece5d7;
+    --surface-2: #e2dac9;
+    --text: #20262e;
+    --muted: #4a525c;
+    --faint: #5b636d;
+    --line: #cdc4b2;
     --accent: #1d5fd1;
-    --accent-strong: #164ca8;
-    --focus: #9b5c00;
-    --ok-bg: #daf1e2;
+    --accent-strong: #16498f;
+    --focus: #8a4f00;
+    --ok-bg: #dcefdf;
     --ok-bd: #1f7a3a;
-    --warn-bg: #f5e8c4;
+    --warn-bg: #f0e6c6;
     --warn-bd: #7a651f;
-    --fail-bg: #f6dada;
+    --fail-bg: #f1dcd6;
     --fail-bd: #a52020;
-    --pass-bg: #d8f1e1;
+    --pass-bg: #dcefdf;
     --pass-fg: #075d2c;
-    --warn-fg: #5f4b0a;
+    --warn-fg: #5a4708;
     --fail-fg: #8a1f1f;
   }
+}
+
+/* Explicit theme overrides for the picker: set <html data-theme="…">.
+   These win regardless of the OS light/dark setting. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101214;
+  --surface: #171a1f;
+  --surface-2: #20242b;
+  --text: #f2f4f7;
+  --muted: #bdc6d1;
+  --faint: #9da8b4;
+  --line: #3a424d;
+  --accent: #8ab4ff;
+  --accent-strong: #b8d2ff;
+  --focus: #ffd166;
+  --ok-bg: #0f2c1a;
+  --ok-bd: #39a461;
+  --warn-bg: #30280d;
+  --warn-bd: #b7962d;
+  --fail-bg: #351414;
+  --fail-bd: #cc4747;
+  --pass-bg: #14361f;
+  --pass-fg: #8af2b0;
+  --warn-fg: #f3d978;
+  --fail-fg: #ff9b9b;
+}
+
+:root[data-theme="beige"] {
+  color-scheme: light;
+  --bg: #f2ece0;
+  --surface: #ece5d7;
+  --surface-2: #e2dac9;
+  --text: #20262e;
+  --muted: #4a525c;
+  --faint: #5b636d;
+  --line: #cdc4b2;
+  --accent: #1d5fd1;
+  --accent-strong: #16498f;
+  --focus: #8a4f00;
+  --ok-bg: #dcefdf;
+  --ok-bd: #1f7a3a;
+  --warn-bg: #f0e6c6;
+  --warn-bd: #7a651f;
+  --fail-bg: #f1dcd6;
+  --fail-bd: #a52020;
+  --pass-bg: #dcefdf;
+  --pass-fg: #075d2c;
+  --warn-fg: #5a4708;
+  --fail-fg: #8a1f1f;
+}
+
+:root[data-theme="blue"] {
+  color-scheme: light;
+  --bg: #e8eef4;
+  --surface: #dde6ef;
+  --surface-2: #d0dbe8;
+  --text: #1a2330;
+  --muted: #45505f;
+  --faint: #586475;
+  --line: #bcc8d6;
+  --accent: #1d5fd1;
+  --accent-strong: #163f86;
+  --focus: #8a4f00;
+  --ok-bg: #d8eede;
+  --ok-bd: #1f7a3a;
+  --warn-bg: #efe6c6;
+  --warn-bd: #7a651f;
+  --fail-bg: #f1dcd6;
+  --fail-bd: #a52020;
+  --pass-bg: #d8eede;
+  --pass-fg: #075d2c;
+  --warn-fg: #5a4708;
+  --fail-fg: #8a1f1f;
 }
 
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+
+/* Theme picker (injected by js/theme.js) — small, fixed, follows the tokens. */
+#themePicker {
+  position: fixed;
+  right: .75rem;
+  bottom: .75rem;
+  z-index: 50;
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+  padding: .35rem .55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: .8rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+  opacity: .85;
+}
+#themePicker:hover, #themePicker:focus-within { opacity: 1; }
+#themePicker label { font-weight: 700; letter-spacing: .03em; }
+#themePicker select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  padding: .15rem .3rem;
+}
+@media print { #themePicker { display: none; } }
 
 body {
   min-height: 100vh;
