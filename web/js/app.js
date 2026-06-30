@@ -25,6 +25,7 @@ const roFindings = document.getElementById("roFindings");
 const roStored = document.getElementById("roStored");
 const shareObservationsCsv = document.getElementById("shareObservationsCsv");
 const shareObservationsJson = document.getElementById("shareObservationsJson");
+const shareObservationStills = document.getElementById("shareObservationStills");
 const storageStatus = document.getElementById("storageStatus");
 
 // Off-screen buffer we read pixels from (downscaled — CV doesn't need full
@@ -44,11 +45,32 @@ let pipeline = createPipeline(activeUse, { onObservation: persistObservation });
 async function persistObservation(observation) {
   if (!observationStore) return;
   try {
-    await observationStore.add(observation);
+    const still = await captureObservationStill();
+    await observationStore.add(observation, { still });
     await refreshStoredCount();
   } catch (e) {
     storageStatus.textContent = "storage failed: " + e.message;
   }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const parts = dataUrl.split(",");
+  const meta = parts[0].match(/:(.*?);/);
+  const mime = meta ? meta[1] : "image/jpeg";
+  const binary = atob(parts[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+function captureObservationStill() {
+  if (!work.width || !work.height) return null;
+  if (work.toBlob) {
+    return new Promise((resolve) => {
+      work.toBlob((blob) => resolve(blob), "image/jpeg", 0.72);
+    });
+  }
+  return Promise.resolve(dataUrlToBlob(work.toDataURL("image/jpeg", 0.72)));
 }
 
 function syncUseUi() {
@@ -74,7 +96,8 @@ async function refreshStoredCount() {
   if (!observationStore) return;
   const total = await observationStore.count();
   const useCount = await observationStore.count({ use: activeUse.id });
-  roStored.textContent = `${useCount} for this use · ${total} total`;
+  const stills = await observationStore.countMedia({ use: activeUse.id });
+  roStored.textContent = `${useCount} for this use · ${total} total · ${stills} stills`;
 }
 
 async function shareOrDownload({ text, type, extension }) {
@@ -96,6 +119,27 @@ async function shareOrDownload({ text, type, extension }) {
   return "downloaded";
 }
 
+async function shareOrDownloadMedia(records) {
+  if (!records.length) return "no stills";
+  const canCreateFile = typeof File !== "undefined";
+  const files = canCreateFile
+    ? records.map((record) => new File([record.blob], record.filename, { type: record.mime }))
+    : [];
+  if (files.length && navigator.canShare?.({ files })) {
+    await navigator.share({ files, title: "lookout observation stills" });
+    return "shared";
+  }
+  for (const record of records) {
+    const url = URL.createObjectURL(record.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = record.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  return "downloaded";
+}
+
 async function shareObservations(format) {
   if (!observationStore) return;
   try {
@@ -109,6 +153,23 @@ async function shareObservations(format) {
       extension: isCsv ? "csv" : "json",
     });
     storageStatus.textContent = `${result} observations ${format.toUpperCase()}.`;
+  } catch (e) {
+    if (e.name !== "AbortError") storageStatus.textContent = "share failed: " + e.message;
+  }
+}
+
+async function shareStills() {
+  if (!observationStore) return;
+  try {
+    const records = await observationStore.listMedia({
+      use: activeUse.id,
+      kind: "still",
+      limit: 50,
+    });
+    const result = await shareOrDownloadMedia(records);
+    storageStatus.textContent = result === "no stills"
+      ? "no observation stills stored for this use."
+      : `${result} ${records.length} observation stills.`;
   } catch (e) {
     if (e.name !== "AbortError") storageStatus.textContent = "share failed: " + e.message;
   }
@@ -203,6 +264,7 @@ document.getElementById("start").addEventListener("click", start);
 document.getElementById("stop").addEventListener("click", stop);
 shareObservationsCsv.addEventListener("click", () => shareObservations("csv"));
 shareObservationsJson.addEventListener("click", () => shareObservations("json"));
+shareObservationStills.addEventListener("click", shareStills);
 
 syncUseUi();
 roMeasure.textContent = "awaiting detection...";
@@ -211,7 +273,7 @@ showFindings(pipeline.findings()); // exercise the API now (empty obs -> stub/em
 openObservationStore().then((store) => {
   observationStore = store;
   storageStatus.textContent = store.persistent
-    ? "stored locally in this browser."
+    ? "stored locally in this browser. Stills may contain identifying imagery; share them deliberately."
     : "local storage unavailable; observations will not persist.";
   refreshStoredCount();
 });

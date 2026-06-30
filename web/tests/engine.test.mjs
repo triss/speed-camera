@@ -47,6 +47,9 @@ truthy("pipeline emits persistable observations", persisted.length === 1 && pers
 eq("observationsToCSV escapes cells", observationsToCSV([
   { id: 1, use: "count", t: 1000, direction: "left, then right", note: 'said "go"' },
 ]), 'id,use,t,direction,note\n1,count,1000,"left, then right","said ""go"""\n');
+eq("observationsToCSV stringifies media references", observationsToCSV([
+  { id: 2, use: "count", t: 1000, media: { still_id: 7, still_file: "obs.jpg" } },
+]), 'id,use,t,media\n2,count,1000,"{""still_id"":7,""still_file"":""obs.jpg""}"\n');
 
 // SPEED: measure stubs (needs calibration), deriveFindings real
 const speed = getUse("speed");

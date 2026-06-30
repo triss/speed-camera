@@ -9,9 +9,11 @@
 // Old phones have limited quota; 10 000 tiny JSON objects is ~2–4 MB.
 
 const DB_NAME = "lookout";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "observations";
+const MEDIA_STORE_NAME = "media";
 const MAX_STORED = 10_000;
+const MAX_MEDIA = 500;
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -27,9 +29,14 @@ function txStore(db, mode) {
   return tx.objectStore(STORE_NAME);
 }
 
+function namedStore(db, name, mode) {
+  const tx = db.transaction(name, mode);
+  return tx.objectStore(name);
+}
+
 function csvCell(value) {
   if (value === null || typeof value === "undefined") return "";
-  const text = String(value);
+  const text = typeof value === "object" ? JSON.stringify(value) : String(value);
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
@@ -70,6 +77,31 @@ function collectObservations(db, { use } = {}) {
   });
 }
 
+function collectMedia(db, { use, kind, limit } = {}) {
+  const store = namedStore(db, MEDIA_STORE_NAME, "readonly");
+  const results = [];
+  const max = limit || 100;
+  return new Promise((resolve, reject) => {
+    let cursor;
+    if (use) {
+      const range = IDBKeyRange.bound([use, 0], [use, Infinity]);
+      cursor = store.index("use_t").openCursor(range, "prev");
+    } else {
+      cursor = store.index("t").openCursor(null, "prev");
+    }
+    cursor.onsuccess = () => {
+      const c = cursor.result;
+      if (c && results.length < max) {
+        if (!kind || c.value.kind === kind) results.push(c.value);
+        c.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    cursor.onerror = () => reject(cursor.error);
+  });
+}
+
 // ── open / create ──────────────────────────────────────────────────────────
 
 function openDB() {
@@ -85,6 +117,15 @@ function openDB() {
         store.createIndex("use_t", ["use", "t"]);
         store.createIndex("t", "t");
       }
+      if (!db.objectStoreNames.contains(MEDIA_STORE_NAME)) {
+        const media = db.createObjectStore(MEDIA_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        media.createIndex("use_t", ["use", "t"]);
+        media.createIndex("t", "t");
+        media.createIndex("observation_id", "observation_id");
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -97,15 +138,38 @@ function createStore(db) {
   return {
     persistent: true,
 
-    /** Add one observation. { use, t, …measurement }. Fire-and-forget safe. */
-    async add(observation) {
+    /** Add one observation. { use, t, ...measurement }. Optional { still }. */
+    async add(observation, media = {}) {
       const store = txStore(db, "readwrite");
-      await promisify(store.add(observation));
+      const observationId = await promisify(store.add(observation));
+      let saved = { ...observation, id: observationId };
+      if (media.still) {
+        const filename = `lookout-observation-${observationId}.jpg`;
+        const mediaStore = namedStore(db, MEDIA_STORE_NAME, "readwrite");
+        const stillId = await promisify(mediaStore.add({
+          observation_id: observationId,
+          use: observation.use,
+          t: observation.t,
+          kind: "still",
+          mime: media.still.type || "image/jpeg",
+          filename,
+          blob: media.still,
+        }));
+        saved = {
+          ...saved,
+          media: { still_id: stillId, still_file: filename },
+        };
+        const updateStore = txStore(db, "readwrite");
+        await promisify(updateStore.put(saved));
+        await this._trimOldestMedia();
+      }
       // Auto-rotate: if we're over budget, trim the oldest.
-      const total = await promisify(store.count());
+      const countStore = txStore(db, "readonly");
+      const total = await promisify(countStore.count());
       if (total > MAX_STORED) {
         await this._trimOldest(total - MAX_STORED);
       }
+      return saved;
     },
 
     /** List observations, newest first. Options: { use, since, until, limit }. */
@@ -176,7 +240,9 @@ function createStore(db) {
     async clear({ use } = {}) {
       if (!use) {
         const store = txStore(db, "readwrite");
-        return promisify(store.clear());
+        await promisify(store.clear());
+        const mediaStore = namedStore(db, MEDIA_STORE_NAME, "readwrite");
+        return promisify(mediaStore.clear());
       }
       // Delete one use at a time via cursor.
       const store = txStore(db, "readwrite");
@@ -189,7 +255,7 @@ function createStore(db) {
           else resolve();
         };
         cursor.onerror = () => reject(cursor.error);
-      });
+      }).then(() => this.clearMedia({ use }));
     },
 
     /** Export observations as a JSON string. Optional { use } filter. */
@@ -206,6 +272,40 @@ function createStore(db) {
     async exportCSV({ use } = {}) {
       const observations = await collectObservations(db, { use });
       return observationsToCSV(observations);
+    },
+
+    /** List stored media records, newest first. Defaults to stills. */
+    async listMedia({ use, kind = "still", limit = 100 } = {}) {
+      return collectMedia(db, { use, kind, limit });
+    },
+
+    /** Count stored media. Optional { use } filter. */
+    async countMedia({ use } = {}) {
+      const store = namedStore(db, MEDIA_STORE_NAME, "readonly");
+      if (use) {
+        const range = IDBKeyRange.bound([use, 0], [use, Infinity]);
+        return promisify(store.index("use_t").count(range));
+      }
+      return promisify(store.count());
+    },
+
+    /** Clear media records. Optional { use } filter. */
+    async clearMedia({ use } = {}) {
+      if (!use) {
+        const store = namedStore(db, MEDIA_STORE_NAME, "readwrite");
+        return promisify(store.clear());
+      }
+      const store = namedStore(db, MEDIA_STORE_NAME, "readwrite");
+      const range = IDBKeyRange.bound([use, 0], [use, Infinity]);
+      return new Promise((resolve, reject) => {
+        const cursor = store.index("use_t").openCursor(range);
+        cursor.onsuccess = () => {
+          const c = cursor.result;
+          if (c) { c.delete(); c.continue(); }
+          else resolve();
+        };
+        cursor.onerror = () => reject(cursor.error);
+      });
     },
 
     /** Oldest observation timestamp, or null. */
@@ -240,6 +340,29 @@ function createStore(db) {
         cursor.onerror = () => reject(cursor.error);
       });
     },
+
+    async _trimOldestMedia() {
+      const countStore = namedStore(db, MEDIA_STORE_NAME, "readonly");
+      const total = await promisify(countStore.count());
+      if (total <= MAX_MEDIA) return 0;
+      let deleted = 0;
+      const toDelete = total - MAX_MEDIA;
+      const store = namedStore(db, MEDIA_STORE_NAME, "readwrite");
+      return new Promise((resolve, reject) => {
+        const cursor = store.index("t").openCursor(null, "next");
+        cursor.onsuccess = () => {
+          const c = cursor.result;
+          if (c && deleted < toDelete) {
+            c.delete();
+            deleted++;
+            c.continue();
+          } else {
+            resolve(deleted);
+          }
+        };
+        cursor.onerror = () => reject(cursor.error);
+      });
+    },
   };
 }
 
@@ -256,6 +379,9 @@ function noopStore() {
     clear() {},
     exportJSON() { return JSON.stringify({ exported: new Date().toISOString(), count: 0, observations: [] }); },
     exportCSV() { return observationsToCSV([]); },
+    listMedia() { return []; },
+    countMedia() { return 0; },
+    clearMedia() {},
     oldestTimestamp() { return null; },
   };
 }

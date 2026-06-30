@@ -1,4 +1,4 @@
-import { getUse, listUses } from "./uses/index.js";
+import { getUse } from "./uses/index.js";
 
 const currentId = document.body.dataset.use;
 const use = getUse(currentId);
@@ -18,20 +18,7 @@ function setText(id, value) {
   if (node) node.textContent = value;
 }
 
-function renderNav() {
-  const nav = document.getElementById("useNav");
-  if (!nav) return;
-  for (const item of listUses()) {
-    const link = document.createElement("a");
-    link.href = `${item.id}.html`;
-    link.textContent = item.name;
-    if (item.id === currentId) link.setAttribute("aria-current", "page");
-    nav.appendChild(link);
-  }
-}
-
 function renderUse() {
-  renderNav();
   if (!use) {
     setText("useTitle", "Unknown use");
     setText("useDescription", "No use is registered for this page.");

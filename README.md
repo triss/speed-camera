@@ -69,13 +69,13 @@ Under `web/`:
 - `web/index.html` — project overview and document index.
 - `web/speed.html`, `web/count.html`, `web/dwell.html`, `web/wildlife.html`,
   `web/environment.html` — one page per engine use. Each page contains its own
-  camera scaffold, live engine readout, local observation count, and CSV/JSON
-  sharing controls.
+  camera scaffold, live engine readout, local observation count, CSV/JSON
+  sharing controls, and optional observation-still sharing.
 - `web/js/engine/` — the engine, as composable components: `gray`, `detect`
   (motion), `track` (ground-contact), `locate` (pluggable backends — only
   `BearingOnly` is implemented; the rest throw "needs calibration/reference"),
   `derive` (pure aggregation helpers), `pipeline` (composes them per use) and
-  `store` (IndexedDB observation persistence with CSV/JSON export).
+  `store` (IndexedDB observation/media persistence with CSV/JSON export).
 - `web/js/uses/` — each use is **built from those components**: it names a
   locate backend and supplies `measure()` / `deriveFindings()`. `count` is
   fully implemented; others have real findings but stub the measurement that
@@ -118,6 +118,9 @@ projection from that JSON is still TODO.
 - **Log on-device, richly:** event records (always; tiny), trigger stills (cheap),
   event clips (opt-in, budgeted, auto-rotated). Threshold-triggered, so an empty
   scene costs nothing.
+- **Attach relevant stills:** each persisted observation can reference a local
+  JPEG still in IndexedDB. CSV/JSON exports include the media reference; the
+  stills are shared explicitly as separate files.
 - **Share findings by one tap:** the Web Share API (`navigator.share({files})`)
   opens the native sheet → WhatsApp / Email. A pure client-side page can't transmit
   on its own — that tap is the (privacy-preserving) human-in-the-loop.
