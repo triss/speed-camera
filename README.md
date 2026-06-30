@@ -1,51 +1,67 @@
-# speed-camera
+# lookout
 
-Estimate vehicle speed from a fixed roadside camera — no neural net, light
-enough to run on a **recycled Android phone**. A static camera + background
-subtraction (MOG2) finds moving blobs; a centroid tracker follows them; a
-homography maps road-plane pixels to real-world metres; speed = metres ÷ seconds.
+Point a recycled phone at one place and it logs what **comes, goes, and changes**
+there over time — people, animals, vehicles, the weather, the seasons. No neural
+net, runs on hardware from a drawer, keeps its data on-device, and shares only
+aggregates.
 
-> **Not an enforcement tool.** Real speed cameras are type-approved and
-> calibrated. This is for traffic-calming evidence, awareness, and learning —
-> the spirit of community speed watch, built from e-waste.
+> A **difference engine for a place.** It watches one spot and writes down what
+> changed — from a car passing in half a second to a hedge growing over a season.
+
+> **Not surveillance.** Data stays on the device; what you ever *share* is
+> aggregate statistics, never footage. For traffic-calming evidence, wildlife
+> notes, footfall, environmental change — the spirit of community monitoring,
+> built from e-waste.
 
 ## Why
 
 A dead phone is a tragedy of embodied energy — camera, GPS, battery, radio and
-real compute, all mined and shipped and then dropped in a drawer. This project
-turns that drawer into a civic sensing tool: a community can gather its own
-data about its own street, on hardware everyone else threw away. The whole
-design is biased toward *computing within limits* — the lightest technique that
-does the job, so it runs on a potato.
+real compute, all mined and shipped, then dropped in a drawer. lookout turns that
+drawer into a civic and ecological sensing tool: a community can gather its own
+data about its own patch, on hardware everyone else threw away. The whole design
+is biased toward *computing within limits* — the lightest technique that does the
+job, so it runs on a potato and reaches the widest range of old devices.
 
-## Status
+## What it senses
 
-| Piece | State |
-| --- | --- |
-| Core estimator (MOG2 → track → homography → mph) | ✅ within ~1.5% on synthetic ground-truth clips |
-| Runs on a phone (Termux + OpenCV) | ✅ all env checks pass, including mp4 I/O |
-| Calibration: steady-pose still capture | ✅ `stable_capture.py` |
-| Calibration: tap-to-mark road points | ✅ `calibrate_points.html` |
-| Capture real traffic footage on the phone | ⚠️ no native Termux video — see [Capturing footage](#capturing-footage) |
-| Measure a real road, on-device | ⏳ next milestone |
-| Unattended / always-on capture | 🔭 future (streaming app or small CameraX app) |
+Two primitives — the same idea (a still camera noticing **difference**) at two
+timescales:
+
+- **Motion events (fast)** — something moves, appears, or leaves: a fox, a
+  pedestrian, a delivery van. Frame-to-frame difference. *(Built.)*
+- **Change detection (slow)** — the scene itself shifts: a hedge leafing out, a
+  puddle becoming a flood, snow arriving, a skip that appears and sits for a week.
+  Difference against a reference / time-lapse. *(Roadmap.)*
+
+From either, you hang **measurements** on a generic event: count, direction,
+dwell time, size, and — where the thing is on a calibrated plane — position and
+**speed**. Vehicle speed is just the first preset.
 
 ## How it works
 
-`detect motion → reduce to points → keep identity → un-perspective into metres → differentiate over time`
+`detect difference → track identity → (optionally) classify → locate → derive measurements`
 
-The point we project is the **ground-contact** of each blob (bottom-centre of
-its box), not the box centre — the homography is only valid on the road plane,
-and the box centre floats above it, which under perspective compressed the
-trajectory and under-read speed by ~7%. Tracking the contact point fixed it.
+The pipeline is deliberately modular. The **locate** stage is a pluggable backend
+(`GroundPlaneHomography` | `KnownSizeRanger` | `StereoTriangulator` | `BearingOnly`)
+because monocular geometry can't recover depth without an assumption — each
+backend supplies a different one. The current default projects the **ground-contact
+point** onto a calibrated road/floor plane; that's what gives position and speed.
 
-Files:
+Classification is optional and starts free: **size + speed + path already separate
+most things** (a 40 mph blob is a vehicle; a low, slow wanderer is an animal), so
+you get most of the "people vs animals vs cars" value with no model at all.
 
-- `src/speed_camera.py` — the estimator (MOG2 → centroid tracking → homography → mph)
+### The speed preset (today's working demo)
+
+- `src/speed_camera.py` — speed estimator (MOG2 → centroid tracking → homography → mph)
 - `src/make_synthetic.py` — renders a clip of a car at a **known** speed, so accuracy is measured, not asserted
-- `src/env_check.py` — smoke test: does this OpenCV build do everything the estimator needs (esp. mp4 I/O)?
-- `src/stable_capture.py` — waits for a steady phone pose (accelerometer + gyro), then grabs a calibration still
+- `src/env_check.py` — OpenCV smoke test (does this build do mp4 I/O etc.)
+- `src/stable_capture.py` — waits for a steady phone pose (accel + gyro), then grabs a calibration still
 - `src/calibrate_points.html` — tap road points on that still, type their real-world metres, export calibration JSON
+
+It reads within ~1.5% of ground truth on synthetic clips. (An earlier ~7% under-read
+came from projecting the bounding-box centre, which floats above the road plane the
+homography is calibrated on; tracking the ground-contact point fixed it.)
 
 ## Quick start (laptop)
 
@@ -61,10 +77,37 @@ python src/speed_camera.py --video clips/test30.mp4 --calib clips/test30.json \
 
 You should measure ~29.7 mph — within ~1.5% of the synthetic 30.
 
+## Web app (the primary host)
+
+The most portable home for lookout is the browser: `getUserMedia` abstracts the
+camera across Android, desktop, and even old iPhones via Safari, with zero install.
+
+**Live (GitHub Pages):** https://triss.github.io/lookout/ — capability check at
+https://triss.github.io/lookout/check.html. Real HTTPS, so the camera works on any
+phone with no local server. The host serves *code only*; camera, processing and
+storage stay on the device. Auto-deploys from `web/` on push.
+
+Under `web/`:
+
+- `web/check.html` — capability probe (browser equivalent of `env_check.py`).
+  Reports which required APIs exist on *this* device and measures the camera's
+  real resolution + frame rate. **Run this first on any candidate phone.**
+- `web/index.html` — app scaffold: a live capture → pixels → overlay loop with the
+  pipeline stages stubbed as seams, including the pluggable locate backend.
+- `web/css/`, `web/js/` — split styles and scripts; the check-page JS is strict
+  ES5 so the checker itself runs on the old browsers it assesses.
+
+Serve locally (getUserMedia needs HTTPS or localhost):
+
+```bash
+cd web && python -m http.server 8000
+# open http://localhost:8000/check.html on the device
+```
+
 ## Running on Termux (Android)
 
-OpenCV isn't in Termux's main repo, and `pip install opencv-python` tries to
-build from source and fails. Use the prebuilt package from the TUR:
+OpenCV isn't in Termux's main repo, and `pip install opencv-python` builds from
+source and fails. Use the prebuilt package from the TUR:
 
 ```bash
 pkg install python-numpy
@@ -73,76 +116,38 @@ pkg install opencv-python
 python src/env_check.py     # verify the build can do mp4 I/O
 ```
 
-Because OpenCV is a system package there, run against system Python — or create
-the venv with `--system-site-packages` so it can see `cv2`.
+OpenCV is a system package there, so run against system Python — or make the venv
+with `--system-site-packages` so it can see `cv2`.
 
-## On a phone, end to end
+## On a phone, end to end (speed preset)
 
 The camera must not move between calibration and capture — the mapping is
 pose-specific. Mount the phone first, then:
 
-**1. Capture a calibration still once the phone is steady**
-
-```bash
-pkg install termux-api
-python src/stable_capture.py --out clips/calib.jpg --stable-s 30
-```
-
-**2. Mark the calibration points** — serve the repo and open the picker in Chrome:
-
-```bash
-python -m http.server 8000
-# open: http://127.0.0.1:8000/src/calibrate_points.html?image=/clips/calib.jpg
-```
-
-Tap ≥4 known road points, enter their real-world metre coordinates, **Copy
-JSON**, and save it as `clips/calib.json`.
-
-**3. Capture traffic footage** without moving the phone — see below.
-
-**4. Measure**
-
-```bash
-python src/speed_camera.py --video <clip-or-stream> --calib clips/calib.json
-```
+1. **Calibration still** once steady: `pkg install termux-api` then
+   `python src/stable_capture.py --out clips/calib.jpg --stable-s 30`
+2. **Mark points:** serve the repo, open `calibrate_points.html` in Chrome, tap ≥4
+   known road points, enter their metres, **Copy JSON** → save as `clips/calib.json`
+3. **Capture footage** without moving the phone (see below)
+4. **Measure:** `python src/speed_camera.py --video <clip-or-stream> --calib clips/calib.json`
 
 ## Capturing footage
 
-Termux has **no native video-record command** (`termux-camera-photo` is
-stills-only, and ffmpeg can't reach the camera — Android exposes it via the HAL,
-not a `/dev/video` device). Three working routes, lightest first:
+Termux has **no native video-record command** (`termux-camera-photo` is stills-only,
+and ffmpeg can't reach the camera). Three routes, lightest first:
 
-**A — stock camera app (simplest, do this first).** Record normally, then read
-the file from Termux:
-
-```bash
-termux-setup-storage                  # one-time storage grant
-python src/speed_camera.py --video ~/storage/dcim/Camera/VID_xxxx.mp4 \
-    --calib clips/calib.json
-```
-
-**B — launch the recorder from the shell.** `durationLimit` auto-stops it:
-
-```bash
-am start -a android.media.action.VIDEO_CAPTURE --ei android.intent.extra.durationLimit 20
-```
-
-**C — live stream (the deployment path).** A camera-streaming app (e.g. IP
-Webcam) serves the camera over HTTP; OpenCV reads the URL directly, so the
-pipeline processes the feed on-device with no record-then-process step:
-
-```bash
-python src/speed_camera.py --video "http://127.0.0.1:8080/video" --calib clips/calib.json
-```
-
-`--video` is passed straight to `cv2.VideoCapture`, which accepts a URL exactly
-like a filename. (Clean Ctrl-C exit with an end-of-run report for live streams
-is a planned nicety.)
+- **A — Open Camera** (open source, F-Droid): record normally, then
+  `termux-setup-storage` and read `~/storage/dcim/Camera/…`.
+- **B — launch from the shell:**
+  `am start -a android.media.action.VIDEO_CAPTURE --ei android.intent.extra.durationLimit 20`
+- **C — live stream:** a camera-streaming app serves the camera over HTTP and the
+  pipeline reads the URL directly: `--video "http://127.0.0.1:8080/video"`
+  (`--video` is passed straight to `cv2.VideoCapture`, which accepts a URL).
 
 ## Calibration schema
 
-Speed is only as good as the pixel→metre mapping. UK dashed lane lines are a
-standard 6 m mark + 9 m gap — a free ruler painted on the road.
+UK dashed lane lines are a standard 6 m mark + 9 m gap — a free ruler painted on the
+road. Provide ≥4 image points whose real-world metres you know:
 
 ```json
 {
@@ -153,40 +158,25 @@ standard 6 m mark + 9 m gap — a free ruler painted on the road.
 }
 ```
 
-`image_points` are pixels; `world_points` are their real-world metres, same
-order, ≥4 of them. `calibrate_points.html` produces this for you.
+## Logging & sharing
 
-## Web app (experimental)
-
-**Live (GitHub Pages):** https://triss.github.io/speed-camera/ — capability
-check at https://triss.github.io/speed-camera/check.html. Real HTTPS, so the
-camera works on any phone with no local server. The host serves *code only*;
-camera, processing and storage stay on the device. Auto-deploys from `web/` on
-push (`.github/workflows/pages.yml`).
-
-The most portable host for this is the browser: `getUserMedia` abstracts the
-camera across Android, desktop, and even old iPhones via Safari, with zero
-install. Under `web/`:
-
-- `web/check.html` — capability probe (the browser equivalent of `env_check.py`).
-  Reports which required APIs exist on *this* device and measures the camera's
-  real resolution + frame rate. **Run this first on any candidate phone.**
-- `web/index.html` — app scaffold: a live capture → pixels → overlay loop (with
-  a placeholder motion meter) and the pipeline stages stubbed as seams, including
-  a pluggable "locate" backend (ground-plane / known-size / stereo / bearing).
-
-Serve it (getUserMedia needs HTTPS or localhost):
-
-```bash
-cd web && python -m http.server 8000
-# open http://localhost:8000/check.html on the device
-```
+- **Log on-device, richly:** event records (always; tiny), trigger stills (cheap),
+  event clips (opt-in, budgeted, auto-rotated). Threshold-triggered, so an empty
+  scene costs nothing.
+- **Share as aggregates, by one tap:** the Web Share API (`navigator.share({files})`)
+  opens the native sheet → WhatsApp / Email. A pure client-side page can't transmit
+  on its own — that tap is the (privacy-preserving) human-in-the-loop.
+- A number plate is personal data under GDPR. Keep identifying imagery on-device;
+  only ever share non-personal statistics.
 
 ## Roadmap
 
-- [ ] First real on-device measurement against a known reference (e.g. a car held at a steady speedometer reading, or a second GPS phone)
-- [ ] Robustness on messy footage: multiple vehicles at once, occlusion, MOG2 warm-up trimming, minimum-track sanity filter
-- [ ] Clean live-stream mode (graceful exit, rolling per-vehicle log)
-- [ ] Unattended capture for an always-on sensor (streaming app autostart, or a small CameraX app)
+- [ ] First real on-device measurement against a known reference
+- [ ] Generalise the event/measurement model beyond speed (count, dwell, direction)
+- [ ] Slow **change detection** mode (reference / time-lapse difference)
+- [ ] Robustness on messy footage: multiple objects, occlusion, warm-up trimming
+- [ ] On-device event log (IndexedDB) + one-tap aggregate share
+- [ ] Optional lightweight classification (person / vehicle / animal)
+- [ ] Unattended capture for an always-on sensor
 - [ ] Workshop material so residents can build their own
 ```

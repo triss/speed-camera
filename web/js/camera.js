@@ -54,7 +54,7 @@
           'facing:     ' + (st.facingMode || '?') + '\n' +
           'reported:   ' + (st.frameRate ? st.frameRate.toFixed(1) + ' fps' : 'n/a') + '\n' +
           'measured:   ' + fps.toFixed(1) + ' fps over ~2s\n\n' +
-          (fps >= 12 ? '→ adequate frame rate for speed estimation.'
+          (fps >= 12 ? '→ adequate frame rate for motion / speed estimation.'
                      : '→ low frame rate; fast objects will suffer.');
       });
     }).catch(function (e) {
