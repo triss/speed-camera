@@ -224,6 +224,13 @@ select {
 
 button:disabled { opacity: .55; }
 
+.icon {
+  display: inline-block;
+  min-width: 1.1em;
+  margin-right: .35em;
+  text-align: center;
+}
+
 ul { padding-left: 1.25rem; }
 li + li { margin-top: .3rem; }
 

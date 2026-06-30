@@ -33,10 +33,10 @@
       <canvas id="calibrationCanvas" class="demo-canvas" aria-label="Calibration image. Click known points on the image."></canvas>
       <p id="calibrationStatus" class="demo-output" role="status" aria-live="polite">Load or take a calibration image, then click known points.</p>
       <div class="demo-actions">
-        <button id="undoPoint" type="button" disabled>Undo point</button>
-        <button id="clearPoints" type="button" disabled>Clear points</button>
-        <button id="copyCalibration" type="button" disabled>Copy JSON</button>
-        <button id="downloadCalibration" type="button" disabled>Download JSON</button>
+        <button id="undoPoint" type="button" disabled><span class="icon" aria-hidden="true">←</span>Undo point</button>
+        <button id="clearPoints" type="button" disabled><span class="icon" aria-hidden="true">✕</span>Clear points</button>
+        <button id="copyCalibration" type="button" disabled><span class="icon" aria-hidden="true">⬇</span>Copy JSON</button>
+        <button id="downloadCalibration" type="button" disabled><span class="icon" aria-hidden="true">⬇</span>Download JSON</button>
       </div>
       <div class="calibration-table-wrap">
         <table class="calibration-table">
