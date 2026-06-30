@@ -23,6 +23,16 @@ export default defineUse({
     "Speed event timestamps",
   ],
 
+  measureStatus: "Needs GroundPlaneHomography calibration (4+ ground points) before it can measure speed.",
+  config: {
+    "Sensing mode": "motion (frame-to-frame difference)",
+    "Locate backend": "GroundPlaneHomography — requires calibration",
+    "Calibration": "4+ known ground points (set on this page); not yet provided",
+    "Speed from": "ground-plane displacement ÷ time",
+    "Reported": "mean and 85th-percentile speed, count by direction",
+    "Leaves device": "speed findings only — no number plates, no footage",
+  },
+
   // Ground-plane displacement ÷ Δt → mph. The locate backend throws until the
   // view is calibrated; once it returns a metric position this becomes real.
   measure(track, ctx, { locate }) {

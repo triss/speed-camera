@@ -4,6 +4,7 @@ import { getUse } from "../js/uses/index.js";
 import { createPipeline } from "../js/engine/pipeline.js";
 import { percentile, mean, sessionize } from "../js/engine/derive.js";
 import { createLocator } from "../js/engine/locate.js";
+import { pipelineOf } from "../js/engine/describe.js";
 import { observationsToCSV } from "../js/engine/store.js";
 
 let pass = 0, fail = 0;
@@ -74,6 +75,18 @@ let envThrew = false;
 try { getUse("environment").measure(); } catch (e) { envThrew = /change-mode/.test(e.message); }
 truthy("environment.measure throws change-mode", envThrew);
 eq("environment.deriveFindings timeline len", getUse("environment").deriveFindings([{ t: 1, change_pct: 5 }]).timeline.length, 1);
+
+// DESCRIBE: the auditable pipeline listing matches reality
+const countMods = pipelineOf(getUse("count"));
+truthy("describe: count is fully implemented", countMods.every((m) => m.status === "implemented"), JSON.stringify(countMods.map((m) => m.status)));
+const speedMods = pipelineOf(getUse("speed"));
+truthy("describe: speed locate+measure are stubs",
+  speedMods.find((m) => m.label.startsWith("Locate")).status === "stub" &&
+  speedMods.find((m) => m.label === "Measure").status === "stub");
+truthy("describe: every motion module has a source link",
+  countMods.every((m) => typeof m.src === "string" && m.src.endsWith(".js")));
+truthy("describe: every use carries a config block",
+  ["count", "speed", "dwell", "wildlife", "environment"].every((id) => Object.keys(getUse(id).config || {}).length > 0));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

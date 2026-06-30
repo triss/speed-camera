@@ -23,6 +23,16 @@ export default defineUse({
     "Peak occupancy",
   ],
 
+  measureStatus: "implemented",
+  config: {
+    "Sensing mode": "motion (frame-to-frame difference)",
+    "Locate backend": "GroundPlaneHomography — only needed for real-world zone sizing",
+    "Visit gap": "3 s without detection ends a visit (sessionize default)",
+    "Dwell": "first-to-last detection within a visit",
+    "Occupancy": "approximate — single-identity tracker",
+    "Leaves device": "dwell / occupancy findings only — never footage",
+  },
+
   // One presence sample per detection; visits (and therefore dwell) are
   // reconstructed in deriveFindings by clustering the sample timestamps.
   measure(track) {

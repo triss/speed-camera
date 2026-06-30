@@ -23,6 +23,16 @@ export default defineUse({
     "Dwell time by visit",
   ],
 
+  measureStatus: "Needs a KnownSizeRanger size reference before it can size animals.",
+  config: {
+    "Sensing mode": "motion (frame-to-frame difference)",
+    "Locate backend": "KnownSizeRanger — requires an object-size reference",
+    "Size reference": "not yet provided",
+    "Sensitivity": "low thresholds, to catch small / slow movement",
+    "Logged": "appearances by hour, rough size class",
+    "Leaves device": "findings only; identifying stills stay local unless exported",
+  },
+
   // Size band needs the ranger backend; it throws until a size reference is
   // configured. Once it returns a size, this records one appearance.
   measure(track, ctx, { locate }) {

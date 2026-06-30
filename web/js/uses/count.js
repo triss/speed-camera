@@ -22,6 +22,17 @@ export default defineUse({
     "Estimated flow per hour",
   ],
 
+  measureStatus: "implemented",
+  config: {
+    "Sensing mode": "motion (frame-to-frame difference)",
+    "Locate backend": "BearingOnly — no calibration needed",
+    "Crossing line": "frame centre (x = width ÷ 2)",
+    "Camera field of view": "60° horizontal (BearingOnly assumption)",
+    "Motion gate": "0.012 frame energy (pipeline default)",
+    "Pixel-change threshold": "25 / 255 (detect default)",
+    "Leaves device": "findings only (counts, direction, flow) — never footage",
+  },
+
   // A crossing happens when the track's ground point moves across the line
   // between the previous and current frame (prev = current − velocity).
   measure(track, ctx, { locate }) {

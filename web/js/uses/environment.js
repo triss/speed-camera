@@ -23,6 +23,16 @@ export default defineUse({
     "Flagged still frames",
   ],
 
+  measureStatus: "Runs on the slow-change pipeline (reference frame + time-lapse), not the motion loop — not wired yet.",
+  config: {
+    "Sensing mode": "change (slow) — not frame-to-frame motion",
+    "Locate backend": "none (no positioning needed)",
+    "Cadence": "time-lapse comparison against a reference frame",
+    "Masking": "ignore naturally flickering regions (sky, water)",
+    "Logged": "percentage change by region, change timeline",
+    "Leaves device": "change-percentage findings; flagged stills stay local",
+  },
+
   measure() {
     throw new Error("change-mode use: runs on the slow-change pipeline (reference frame + time-lapse), not the motion loop — not wired yet");
   },

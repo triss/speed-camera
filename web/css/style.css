@@ -675,6 +675,62 @@ li + li { margin-top: .3rem; }
   margin: 1rem 0;
 }
 
+/* Auditable pipeline-module list on each use page. */
+.module-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: .6rem;
+}
+.module {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: .6rem .75rem;
+}
+.module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.module-name { font-weight: 700; }
+.module-note { margin: .35rem 0 .4rem; color: var(--muted); font-size: .9rem; }
+.module-src {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .78rem;
+  word-break: break-all;
+}
+.badge {
+  flex: none;
+  padding: .1rem .5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.badge-implemented { background: var(--ok-bg); border-color: var(--ok-bd); color: var(--pass-fg); }
+.badge-stub { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn-fg); }
+
+/* Configuration key/value list. */
+.config-list { margin: 1rem 0 0; display: grid; gap: .35rem; }
+.config-list > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: .5rem .9rem;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.config-list dt { color: var(--faint); font-weight: 700; }
+.config-list dd { margin: 0; }
+.config-privacy { font-weight: 700; color: var(--accent-strong); }
+@media (max-width: 560px) {
+  .config-list > div { grid-template-columns: 1fr; gap: .1rem; }
+}
+
 .engine-readout { margin-top: 1.5rem; }
 
 #roMeasure, #roFindings, #roStored {
