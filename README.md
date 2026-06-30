@@ -71,6 +71,9 @@ Under `web/`:
   `web/environment.html` — one page per engine use. Each page contains its own
   camera scaffold, live engine readout, local observation count, CSV/JSON
   sharing controls, and optional observation-still sharing.
+  `web/speed.html` also contains the speed-calibration flow: place the phone,
+  let motion/orientation sensors confirm it is still, capture a photo, then mark
+  point pairs and enter the real distance between each pair.
 - `web/js/engine/` — the engine, as composable components: `gray`, `detect`
   (motion), `track` (ground-contact), `locate` (pluggable backends — only
   `BearingOnly` is implemented; the rest throw "needs calibration/reference"),

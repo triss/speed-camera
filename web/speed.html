@@ -34,6 +34,39 @@
         <h2 id="outputsHeading">Output Stub</h2>
         <div id="outputsList"></div>
       </section>
+      <section class="demo calibration-tool" aria-labelledby="speedCalibrationHeading">
+        <h2 id="speedCalibrationHeading">Speed calibration</h2>
+        <p>Before measuring speed, fix the phone in the place it will watch. lookout waits for the phone to settle, captures a calibration photo, then asks you to mark real distances on the image.</p>
+        <div class="demo-actions">
+          <button id="startSpeedCalibration" type="button"><span class="icon" aria-hidden="true">▶</span>Start calibration</button>
+          <button id="captureSpeedCalibration" type="button" disabled><span class="icon" aria-hidden="true">●</span>Capture now</button>
+          <button id="undoSpeedCalibrationPoint" type="button" disabled><span class="icon" aria-hidden="true">←</span>Undo point</button>
+          <button id="clearSpeedCalibration" type="button" disabled><span class="icon" aria-hidden="true">✕</span>Clear</button>
+        </div>
+        <p id="speedCalibrationStatus" class="demo-output" role="status" aria-live="polite">Start calibration when the phone is close to its final position.</p>
+        <p id="speedCalibrationSensorStatus" class="demo-output">Motion sensors not started.</p>
+        <video id="speedCalibrationVideo" playsinline muted hidden></video>
+        <canvas id="speedCalibrationCanvas" class="demo-canvas" aria-label="Speed calibration image. Click two points for each known distance."></canvas>
+        <div class="calibration-table-wrap">
+          <table class="calibration-table">
+            <caption>Point pairs and real distances</caption>
+            <thead>
+              <tr>
+                <th scope="col">Pair</th>
+                <th scope="col">Image points</th>
+                <th scope="col">Distance m</th>
+              </tr>
+            </thead>
+            <tbody id="speedCalibrationRows"></tbody>
+          </table>
+        </div>
+        <div class="demo-actions">
+          <button id="copySpeedCalibration" type="button" disabled><span class="icon" aria-hidden="true">⬇</span>Copy calibration JSON</button>
+          <button id="downloadSpeedCalibration" type="button" disabled><span class="icon" aria-hidden="true">⬇</span>Download calibration JSON</button>
+        </div>
+        <label class="visually-hidden" for="speedCalibrationJson">Speed calibration JSON</label>
+        <textarea id="speedCalibrationJson" class="calibration-json" readonly></textarea>
+      </section>
       <section aria-labelledby="cameraTitle">
         <h2 id="cameraTitle">Camera Scaffold</h2>
         <div id="stage">
@@ -69,6 +102,7 @@
     </article>
   </main>
   <script type="module" src="js/use-page.js"></script>
+  <script type="module" src="js/speed-calibration.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

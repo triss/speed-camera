@@ -3,6 +3,8 @@ const HEIGHT = 360;
 const PROC_W = 160;
 const PROC_H = 90;
 
+const PIPELINE_CONTEXT = "The demo shows how camera images are simplified into pixels, changed regions, trails, and measurements. This is deliberately visible: people should be able to understand systems that observe shared space.";
+
 function installDownsampleDemo(root) {
   const canvas = root.querySelector("canvas");
   const output = root.querySelector("[data-demo-output]");
@@ -39,7 +41,7 @@ function installDownsampleDemo(root) {
     const sourcePixels = WIDTH * HEIGHT;
     const processingPixels = width * height;
     const ratio = Math.round(sourcePixels / processingPixels);
-    const message = `Processing at ${width} x ${height}: about 1 processing pixel per ${ratio} display pixels.`;
+    const message = `Processing at ${width} x ${height}: about 1 processing pixel per ${ratio} display pixels. The image is simplified before it can become an observation.`;
     output.textContent = message;
     if (now - lastLogAt > 1400) {
       appendLog(log, message);
@@ -103,6 +105,7 @@ function installDownsampleDemo(root) {
   stop.addEventListener("click", end);
   clearCanvas();
   setOutput();
+  appendLog(log, PIPELINE_CONTEXT);
   appendLog(log, "ready");
 }
 
@@ -371,6 +374,8 @@ function installWebcamDemo(root) {
   }
 
   clearCanvas();
+  output.textContent = PIPELINE_CONTEXT;
+  appendLog(log, PIPELINE_CONTEXT);
   appendLog(log, "ready");
   start.addEventListener("click", begin);
   stop.addEventListener("click", end);
