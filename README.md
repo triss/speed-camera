@@ -156,6 +156,26 @@ standard 6 m mark + 9 m gap — a free ruler painted on the road.
 `image_points` are pixels; `world_points` are their real-world metres, same
 order, ≥4 of them. `calibrate_points.html` produces this for you.
 
+## Web app (experimental)
+
+The most portable host for this is the browser: `getUserMedia` abstracts the
+camera across Android, desktop, and even old iPhones via Safari, with zero
+install. Under `web/`:
+
+- `web/check.html` — capability probe (the browser equivalent of `env_check.py`).
+  Reports which required APIs exist on *this* device and measures the camera's
+  real resolution + frame rate. **Run this first on any candidate phone.**
+- `web/index.html` — app scaffold: a live capture → pixels → overlay loop (with
+  a placeholder motion meter) and the pipeline stages stubbed as seams, including
+  a pluggable "locate" backend (ground-plane / known-size / stereo / bearing).
+
+Serve it (getUserMedia needs HTTPS or localhost):
+
+```bash
+cd web && python -m http.server 8000
+# open http://localhost:8000/check.html on the device
+```
+
 ## Roadmap
 
 - [ ] First real on-device measurement against a known reference (e.g. a car held at a steady speedometer reading, or a second GPS phone)
