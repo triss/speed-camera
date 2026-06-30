@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · detect difference</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content">
+    <p class="eyebrow">Stage 1</p>
+    <h1>Detect difference</h1>
+    <p class="lead">How it works: compare one camera frame with another. Pixels that changed a lot probably belong to something moving, arriving, or leaving.</p>
+    <p>Child version: it is like a spot-the-difference puzzle. The street is mostly the same, but the car moved, so that part lights up.</p>
+    <p>The web version turns each frame into greyscale first, because brightness changes are cheaper to compare than full colour. It subtracts the previous frame from the current frame. Small changes are ignored as noise; larger changes become a motion mask. The first demo shows that mask summarized as a smooth box. The second demo shows the mask itself.</p>
+    <p class="note">The webcam demo asks for camera permission and works on HTTPS or localhost.</p>
+
+    <section class="demo" data-webcam="difference" aria-labelledby="demoHeading">
+      <h2 id="demoHeading">Demo: Smoothed Detection Box</h2>
+      <div class="demo-actions">
+        <button type="button" data-camera-start>Start webcam demo</button>
+        <button type="button" data-camera-stop disabled>Stop webcam</button>
+      </div>
+      <canvas class="demo-canvas" aria-label="Demo showing changed camera pixels when the webcam is running"></canvas>
+      <p class="demo-output" data-demo-output>Start the webcam to see changed pixels from real movement.</p>
+      <pre class="demo-log" data-demo-log aria-label="Demo log"></pre>
+    </section>
+
+    <section class="demo" data-webcam="mask" aria-labelledby="maskDemoHeading">
+      <h2 id="maskDemoHeading">Demo: Frame Difference Mask</h2>
+      <p class="note">White pixels changed a lot since the previous frame. Black pixels stayed similar. Speckles are normal camera noise; moving an object creates a larger white shape.</p>
+      <div class="demo-actions">
+        <button type="button" data-camera-start>Start webcam demo</button>
+        <button type="button" data-camera-stop disabled>Stop webcam</button>
+      </div>
+      <canvas class="demo-canvas" aria-label="Demo showing a black and white frame-difference mask"></canvas>
+      <p class="demo-output" data-demo-output>Start the webcam to see the raw difference mask.</p>
+      <pre class="demo-log" data-demo-log aria-label="Difference mask demo log"></pre>
+    </section>
+
+    <section aria-labelledby="codeHeading">
+      <h2 id="codeHeading">Where the code is</h2>
+      <p>The webcam demos implement this stage with <code>toGray()</code>, <code>changedRegion()</code>, <code>drawRegion()</code>, and <code>drawMask()</code> in <code>web/js/pipeline-demos.js</code>. The main app scaffold uses <code>toGray()</code> and <code>motionEnergy()</code> in <code>web/js/app.js</code>.</p>
+      <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/pipeline-demos.js">web/js/pipeline-demos.js</a></li>
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/app.js">web/js/app.js</a></li>
+      </ul>
+    </section>
+  </main>
+  <script type="module" src="js/pipeline-demos.js"></script>
+</body>
+</html>

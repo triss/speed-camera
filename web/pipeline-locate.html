@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · locate</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content">
+    <p class="eyebrow">Stage 3</p>
+    <h1>Locate</h1>
+    <p class="lead">How it works: a calibration tells lookout how a flat ground shape in the camera maps to real metres on the ground.</p>
+    <p>Child version: the camera photo is like a squashed drawing of the road. Calibration is the trick that unsquashes the drawing so we can use a ruler.</p>
+
+    <section class="demo" aria-labelledby="demoHeading">
+      <h2 id="demoHeading">Demo</h2>
+      <p class="demo-output">No live webcam demo here yet. A correct locate demo needs calibration points for this camera view, otherwise it would pretend pixels are real metres without proof.</p>
+    </section>
+
+    <section aria-labelledby="codeHeading">
+      <h2 id="codeHeading">Where the code is</h2>
+      <p>Presets declare which locate backend they need with the <code>locate</code> field in <code>web/js/engine/preset.js</code>. Browser calibration and pixel-to-ground projection are still TODO.</p>
+      <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/engine/preset.js">web/js/engine/preset.js</a></li>
+        <li><a href="https://github.com/triss/lookout/tree/main/web/js/presets">web/js/presets/</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · derive measurements</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content">
+    <p class="eyebrow">Stage 4</p>
+    <h1>Derive measurements</h1>
+    <p class="lead">How it works: once we have a track, we turn it into useful facts: how many, how long, which way, or how fast.</p>
+    <p>Child version: if you know where a car was before and where it is now, you can ask, “how far did it go, and how long did that take?”</p>
+    <p class="note">The webcam demo derives pixel speed only. Real-world speed still needs the locate/calibration stage.</p>
+
+    <section class="demo" data-webcam="derive" aria-labelledby="demoHeading">
+      <h2 id="demoHeading">Demo</h2>
+      <div class="demo-actions">
+        <button type="button" data-camera-start>Start webcam demo</button>
+        <button type="button" data-camera-stop disabled>Stop webcam</button>
+      </div>
+      <canvas class="demo-canvas" aria-label="Demo deriving pixel speed from tracked webcam motion when the webcam is running"></canvas>
+      <p class="demo-output" data-demo-output>Start the webcam to derive a pixel-speed measurement from real motion.</p>
+      <pre class="demo-log" data-demo-log aria-label="Demo log"></pre>
+    </section>
+
+    <section aria-labelledby="codeHeading">
+      <h2 id="codeHeading">Where the code is</h2>
+      <p>The webcam demo reports pixel speed in <code>measurement()</code> using the trail from <code>drawRegion()</code>. Preset modules declare future output fields in their <code>measurements</code> arrays.</p>
+      <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/pipeline-demos.js">web/js/pipeline-demos.js</a></li>
+        <li><a href="https://github.com/triss/lookout/tree/main/web/js/presets">web/js/presets/</a></li>
+      </ul>
+    </section>
+  </main>
+  <script type="module" src="js/pipeline-demos.js"></script>
+</body>
+</html>

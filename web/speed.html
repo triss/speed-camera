@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · vehicle speed</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use" data-preset="speed">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content" class="use-layout">
+    <nav id="useNav" class="use-nav" aria-label="Engine uses"></nav>
+    <article class="use-panel">
+      <p class="eyebrow">Engine use</p>
+      <h1 id="presetTitle">Vehicle speed</h1>
+      <p id="presetSummary" class="lead"></p>
+      <dl class="facts">
+        <div><dt>Mode</dt><dd id="modeValue"></dd></div>
+        <div><dt>Locate backend</dt><dd id="locateValue"></dd></div>
+        <div><dt>Measurements</dt><dd id="measurementsValue"></dd></div>
+      </dl>
+      <section aria-labelledby="setupHeading">
+        <h2 id="setupHeading">Setup Stub</h2>
+        <div id="setupList"></div>
+      </section>
+      <section aria-labelledby="outputsHeading">
+        <h2 id="outputsHeading">Output Stub</h2>
+        <div id="outputsList"></div>
+      </section>
+      <a id="launchApp" class="button-link" href="index.html?preset=speed">Open Camera Scaffold</a>
+    </article>
+  </main>
+  <script type="module" src="js/preset-page.js"></script>
+</body>
+</html>

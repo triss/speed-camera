@@ -45,7 +45,7 @@
       } },
 
     { group: 'Performance', name: 'WebAssembly',
-      gates: 'optional fast CV core (OpenCV.js / Rust/C engine)',
+      gates: 'optional fast computer-vision core compiled to WebAssembly',
       run: function () {
         return (typeof WebAssembly === 'object' && typeof WebAssembly.instantiate === 'function')
           ? { status: 'pass', detail: 'WASM available' }
@@ -89,7 +89,7 @@
           : { status: 'warn', detail: 'no wake lock — screen may sleep' };
       } },
     { group: 'Deployment & UX', name: 'DeviceMotion / Orientation',
-      gates: 'the steady-pose probe (web port of stable_capture.py)',
+      gates: 'the steady-pose probe for calibration capture',
       run: function () {
         return ('DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window)
           ? { status: 'pass', detail: 'present (iOS needs a permission tap)' }

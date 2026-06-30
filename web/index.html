@@ -7,23 +7,43 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-app">
-  <h1>lookout 🦄</h1>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
 
-  <div id="stage">
-    <video id="video" playsinline muted></video>
-    <canvas id="overlay"></canvas>
-  </div>
+  <main id="content" class="app-layout">
+    <section class="app-intro" aria-labelledby="appTitle">
+      <h1 id="appTitle">Difference engine for a place</h1>
+      <p class="lead">Choose a use, open the camera, and watch the shared capture pipeline run. Measurement stages are still stubs.</p>
+    </section>
 
-  <div class="controls">
-    <button id="start">Start camera</button>
-    <button id="stop" disabled>Stop</button>
-  </div>
-  <div id="status">Idle. New here? Run the <a href="check.html">capability check</a> first.</div>
+    <section class="field" aria-labelledby="presetLabel">
+      <label id="presetLabel" for="presetSelect">Engine use</label>
+      <select id="presetSelect"></select>
+      <p id="presetSummary" class="note"></p>
+      <a id="presetLink" href="speed.html">Open this use page</a>
+    </section>
 
-  <p class="note">
-    Scaffold only. Capture → pixels → overlay loop is live (the bar shows frame-to-frame
-    motion as proof of life). The real pipeline stages are stubs.
-  </p>
+    <section aria-labelledby="cameraTitle">
+      <h2 id="cameraTitle">Camera Scaffold</h2>
+      <div id="stage">
+        <video id="video" playsinline muted aria-label="Live camera preview"></video>
+        <canvas id="overlay" aria-hidden="true"></canvas>
+      </div>
+
+      <div class="controls">
+        <button id="start" type="button">Start camera</button>
+        <button id="stop" type="button" disabled>Stop</button>
+      </div>
+      <p id="status" role="status" aria-live="polite">Idle. New here? Run the <a href="check.html">capability check</a> first.</p>
+    </section>
+  </main>
 
   <script type="module" src="js/app.js"></script>
 </body>

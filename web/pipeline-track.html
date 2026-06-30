@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · track identity</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content">
+    <p class="eyebrow">Stage 2</p>
+    <h1>Track identity</h1>
+    <p class="lead">How it works: after something is detected, the tracker gives it an ID and matches its next position to the nearest old position.</p>
+    <p>Child version: if two toy cars are moving, we put sticker #1 on one and sticker #2 on the other, then keep the stickers with the same cars.</p>
+    <p class="note">The webcam demo asks for camera permission and works on HTTPS or localhost. It tracks the centre of changed pixels, not a full object detector.</p>
+
+    <section class="demo" data-webcam="track" aria-labelledby="demoHeading">
+      <h2 id="demoHeading">Demo</h2>
+      <div class="demo-actions">
+        <button type="button" data-camera-start>Start webcam demo</button>
+        <button type="button" data-camera-stop disabled>Stop webcam</button>
+      </div>
+      <canvas class="demo-canvas" aria-label="Demo tracking the centre of changed webcam pixels when the webcam is running"></canvas>
+      <p class="demo-output" data-demo-output>Start the webcam to track real motion in the frame.</p>
+      <pre class="demo-log" data-demo-log aria-label="Demo log"></pre>
+    </section>
+
+    <section aria-labelledby="codeHeading">
+      <h2 id="codeHeading">Where the code is</h2>
+      <p>The webcam demo computes a simple motion centre in <code>changedRegion()</code> and keeps a short trail in <code>drawRegion()</code>. Full object identity tracking is still a web TODO in <code>web/js/app.js</code>.</p>
+      <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/pipeline-demos.js">web/js/pipeline-demos.js</a></li>
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/app.js">web/js/app.js</a></li>
+      </ul>
+    </section>
+  </main>
+  <script type="module" src="js/pipeline-demos.js"></script>
+</body>
+</html>

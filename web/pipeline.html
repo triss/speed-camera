@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · pipeline</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html" aria-current="page">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content">
+    <p class="eyebrow">How it works</p>
+    <h1>The pipeline</h1>
+    <p class="lead">lookout watches one place with a fixed camera. It asks: what changed, where did it go, where is that on the ground, and what useful number can we make from it?</p>
+    <p>Explained for a child: imagine taking two photos of the same street. If a blue car appears in the second photo, that is a change. If the blue car keeps moving, we give it a name and follow it. If we know where the road is, we can say where the car is on the road. Then we can count it or work out its speed.</p>
+
+    <nav class="pipeline-flow" aria-label="Pipeline stages">
+      <a href="pipeline-detect.html"><strong>1. Detect difference</strong><span class="note">Find what changed in the picture.</span></a>
+      <a href="pipeline-track.html"><strong>2. Track identity</strong><span class="note">Keep the same name on the same thing.</span></a>
+      <a href="pipeline-locate.html"><strong>3. Locate</strong><span class="note">Turn camera pixels into a place on the ground.</span></a>
+      <a href="pipeline-derive.html"><strong>4. Derive measurements</strong><span class="note">Make useful numbers like count, dwell, and speed.</span></a>
+      <a href="pipeline-classify.html"><strong>5. Classify lightly</strong><span class="note">Use simple clues before heavier models.</span></a>
+    </nav>
+
+    <section aria-labelledby="codeHeading">
+      <h2 id="codeHeading">Where the code is</h2>
+      <dl class="implementation-map">
+        <div>
+          <dt>Detect difference</dt>
+          <dd><code>web/js/pipeline-demos.js</code>: <code>toGray()</code>, <code>changedRegion()</code>, <code>drawRegion()</code>. <code>web/js/app.js</code>: <code>toGray()</code> and <code>motionEnergy()</code>.</dd>
+        </div>
+        <div>
+          <dt>Track identity</dt>
+          <dd><code>web/js/pipeline-demos.js</code>: simple webcam motion-centre trail in <code>drawRegion()</code>. Full identity tracking is still a web TODO in <code>web/js/app.js</code>.</dd>
+        </div>
+        <div>
+          <dt>Locate</dt>
+          <dd><code>web/js/engine/preset.js</code>: preset <code>locate</code> backend declaration. Browser calibration and pixel-to-ground projection are still TODO.</dd>
+        </div>
+        <div>
+          <dt>Derive measurements</dt>
+          <dd><code>web/js/pipeline-demos.js</code>: pixel-speed demo in <code>measurement()</code>. <code>web/js/presets/</code>: declared measurement fields for each use.</dd>
+        </div>
+        <div>
+          <dt>Classify lightly</dt>
+          <dd>No classifier function yet. <code>web/js/engine/preset.js</code> registers preset stubs with <code>definePreset()</code>; <code>web/js/presets/</code> declares future measurement shapes.</dd>
+        </div>
+      </dl>
+      <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/pipeline-demos.js">web/js/pipeline-demos.js</a></li>
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/app.js">web/js/app.js</a></li>
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/engine/preset.js">web/js/engine/preset.js</a></li>
+        <li><a href="https://github.com/triss/lookout/tree/main/web/js/presets">web/js/presets/</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,11 +1,16 @@
 "use strict";
 
+import { getPreset, listPresets } from "./presets/index.js";
+
 // App scaffold. Live capture → downscale → pixels → overlay loop. The real
 // pipeline stages are stubs (see README "How it works").
 const video = document.getElementById("video");
 const overlay = document.getElementById("overlay");
 const octx = overlay.getContext("2d");
 const status = document.getElementById("status");
+const presetSelect = document.getElementById("presetSelect");
+const presetSummary = document.getElementById("presetSummary");
+const presetLink = document.getElementById("presetLink");
 
 // Off-screen buffer we actually read pixels from (downscaled for speed —
 // CV does not need full camera resolution, and old phones thank you for it).
@@ -15,6 +20,8 @@ const PROC_W = 320; // processing width; height derived from aspect
 let procH = 240;
 
 let stream = null, running = false, prevGray = null;
+let activePreset = getPreset(new URLSearchParams(location.search).get("preset")) ||
+  getPreset("speed");
 
 // ── Pipeline stages (stubs — see README "How it works") ──────────────
 // 1. detect movers   — placeholder: frame differencing (motion energy)
@@ -52,7 +59,24 @@ function drawOverlay(energy) {
   octx.fillRect(8, 8, (w - 16) * Math.min(1, energy * 8), barH);
   octx.fillStyle = "#eee";
   octx.font = "13px system-ui, sans-serif";
-  octx.fillText(`motion ${(energy * 100).toFixed(1)}%`, 10, 36);
+  octx.fillText(`${activePreset.name}: motion ${(energy * 100).toFixed(1)}%`, 10, 36);
+}
+
+function syncPresetUi() {
+  if (!activePreset) return;
+  presetSelect.value = activePreset.id;
+  presetSummary.textContent = activePreset.summary;
+  presetLink.href = `${activePreset.id}.html`;
+}
+
+function installPresetOptions() {
+  for (const preset of listPresets()) {
+    const option = document.createElement("option");
+    option.value = preset.id;
+    option.textContent = preset.name;
+    presetSelect.appendChild(option);
+  }
+  syncPresetUi();
 }
 
 function frame() {
@@ -100,7 +124,7 @@ async function start() {
   const s = stream.getVideoTracks()[0].getSettings?.() || {};
   status.textContent = `running · ${video.videoWidth}×${video.videoHeight}` +
     (s.frameRate ? ` · ${s.frameRate.toFixed(0)} fps` : "") +
-    ` · processing at ${PROC_W}px`;
+    ` · ${activePreset.name} · processing at ${PROC_W}px`;
   schedule();
 }
 
@@ -116,3 +140,9 @@ function stop() {
 
 document.getElementById("start").addEventListener("click", start);
 document.getElementById("stop").addEventListener("click", stop);
+presetSelect.addEventListener("change", () => {
+  activePreset = getPreset(presetSelect.value);
+  syncPresetUi();
+  status.textContent = `${activePreset.name} selected. Measurement logic is still stubbed.`;
+});
+installPresetOptions();

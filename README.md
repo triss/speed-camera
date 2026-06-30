@@ -51,32 +51,6 @@ Classification is optional and starts free: **size + speed + path already separa
 most things** (a 40 mph blob is a vehicle; a low, slow wanderer is an animal), so
 you get most of the "people vs animals vs cars" value with no model at all.
 
-### The speed preset (today's working demo)
-
-- `src/speed_camera.py` — speed estimator (MOG2 → centroid tracking → homography → mph)
-- `src/make_synthetic.py` — renders a clip of a car at a **known** speed, so accuracy is measured, not asserted
-- `src/env_check.py` — OpenCV smoke test (does this build do mp4 I/O etc.)
-- `src/stable_capture.py` — waits for a steady phone pose (accel + gyro), then grabs a calibration still
-- `src/calibrate_points.html` — tap road points on that still, type their real-world metres, export calibration JSON
-
-It reads within ~1.5% of ground truth on synthetic clips. (An earlier ~7% under-read
-came from projecting the bounding-box centre, which floats above the road plane the
-homography is calibrated on; tracking the ground-contact point fixed it.)
-
-## Quick start (laptop)
-
-```bash
-python3 -m venv .venv && . .venv/bin/activate
-pip install opencv-python-headless numpy   # on Termux, see below instead
-
-# closed-loop test: generate a 30 mph clip, then measure it back
-python src/make_synthetic.py --mph 30 --out clips/test30
-python src/speed_camera.py --video clips/test30.mp4 --calib clips/test30.json \
-    --out out/test30_annot.mp4
-```
-
-You should measure ~29.7 mph — within ~1.5% of the synthetic 30.
-
 ## Web app (the primary host)
 
 The most portable home for lookout is the browser: `getUserMedia` abstracts the
@@ -89,65 +63,34 @@ storage stay on the device. Auto-deploys from `web/` on push.
 
 Under `web/`:
 
-- `web/check.html` — capability probe (browser equivalent of `env_check.py`).
+- `web/check.html` — browser capability probe.
   Reports which required APIs exist on *this* device and measures the camera's
   real resolution + frame rate. **Run this first on any candidate phone.**
 - `web/index.html` — app scaffold: a live capture → pixels → overlay loop with the
   pipeline stages stubbed as seams, including the pluggable locate backend.
+- `web/pipeline.html` plus `web/pipeline-*.html` — plain-language pages for each
+  pipeline technique, each with a small browser demo and links back to the code.
+- `web/speed.html`, `web/count.html`, `web/dwell.html`, `web/wildlife.html`,
+  `web/environment.html` — one page per potential engine use. These pages are
+  preset stubs: they declare the sensing mode, locate backend, setup needs and
+  aggregate outputs before the measurement logic exists.
 - `web/css/`, `web/js/` — split styles and scripts; the check-page JS is strict
   ES5 so the checker itself runs on the old browsers it assesses.
 
-Serve locally (getUserMedia needs HTTPS or localhost):
+Serve `web/` with any static file server for local development. `getUserMedia`
+requires HTTPS or `localhost`.
 
-```bash
-cd web && python -m http.server 8000
-# open http://localhost:8000/check.html on the device
-```
+## On a phone
 
-## Running on Termux (Android)
+The web version runs in the browser. Open the live GitHub Pages URL, run the
+capability check, then use the camera scaffold or one of the pipeline demo pages.
+Camera processing happens locally in the page.
 
-OpenCV isn't in Termux's main repo, and `pip install opencv-python` builds from
-source and fails. Use the prebuilt package from the TUR:
-
-```bash
-pkg install python-numpy
-pkg install tur-repo && pkg update
-pkg install opencv-python
-python src/env_check.py     # verify the build can do mp4 I/O
-```
-
-OpenCV is a system package there, so run against system Python — or make the venv
-with `--system-site-packages` so it can see `cv2`.
-
-## On a phone, end to end (speed preset)
-
-The camera must not move between calibration and capture — the mapping is
-pose-specific. Mount the phone first, then:
-
-1. **Calibration still** once steady: `pkg install termux-api` then
-   `python src/stable_capture.py --out clips/calib.jpg --stable-s 30`
-2. **Mark points:** serve the repo, open `calibrate_points.html` in Chrome, tap ≥4
-   known road points, enter their metres, **Copy JSON** → save as `clips/calib.json`
-3. **Capture footage** without moving the phone (see below)
-4. **Measure:** `python src/speed_camera.py --video <clip-or-stream> --calib clips/calib.json`
-
-## Capturing footage
-
-Termux has **no native video-record command** (`termux-camera-photo` is stills-only,
-and ffmpeg can't reach the camera). Three routes, lightest first:
-
-- **A — Open Camera** (open source, F-Droid): record normally, then
-  `termux-setup-storage` and read `~/storage/dcim/Camera/…`.
-- **B — launch from the shell:**
-  `am start -a android.media.action.VIDEO_CAPTURE --ei android.intent.extra.durationLimit 20`
-- **C — live stream:** a camera-streaming app serves the camera over HTTP and the
-  pipeline reads the URL directly: `--video "http://127.0.0.1:8080/video"`
-  (`--video` is passed straight to `cv2.VideoCapture`, which accepts a URL).
-
-## Calibration schema
+## Calibration
 
 UK dashed lane lines are a standard 6 m mark + 9 m gap — a free ruler painted on the
-road. Provide ≥4 image points whose real-world metres you know:
+road. The web calibration UI is still a TODO. It should let the user tap four or
+more image points and enter their matching real-world metre positions:
 
 ```json
 {

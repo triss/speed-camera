@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lookout · classify lightly</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page-use">
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+      <a href="check.html">Capability check</a>
+    </nav>
+  </header>
+  <main id="content">
+    <p class="eyebrow">Optional stage</p>
+    <h1>Classify lightly</h1>
+    <p class="lead">How it works: lookout can often make a rough guess from simple clues like size, speed, and path before using any heavier model.</p>
+    <p>Child version: a big fast thing on the road is probably a vehicle. A small slow thing wandering in a garden might be an animal.</p>
+
+    <section class="demo" aria-labelledby="demoHeading">
+      <h2 id="demoHeading">Demo</h2>
+      <p class="demo-output">No live classifier demo yet. Classification is a design note, not implemented code: the current system records simple measurements that could later feed a classifier.</p>
+    </section>
+
+    <section aria-labelledby="codeHeading">
+      <h2 id="codeHeading">Where the code is</h2>
+      <p>There is no classifier function yet. The current code represents future classification indirectly through preset metadata: <code>measurements</code>, <code>mode</code>, and <code>locate</code> fields in files under <code>web/js/presets/</code>. <code>definePreset()</code> in <code>web/js/engine/preset.js</code> registers those stubs and supplies stub <code>measure()</code> and <code>summarise()</code> functions.</p>
+      <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/README.md">README.md: classification design note</a></li>
+        <li><a href="https://github.com/triss/lookout/tree/main/web/js/presets">web/js/presets/: preset-specific measurements</a></li>
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/engine/preset.js">web/js/engine/preset.js</a></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

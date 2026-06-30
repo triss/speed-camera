@@ -7,23 +7,33 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-check">
-  <h1>lookout · capability check</h1>
-  <div class="sub" id="ua">user agent…</div>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">lookout</a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="pipeline.html">Pipeline</a>
+      <a href="speed.html">Uses</a>
+    </nav>
+  </header>
+  <main id="content">
+    <h1>Capability check</h1>
+    <div class="sub" id="ua">user agent...</div>
 
-  <div id="verdict">Running checks…</div>
+    <div id="verdict" role="status" aria-live="polite">Running checks...</div>
 
-  <h2>Activity log</h2>
-  <pre id="log"></pre>
+    <h2>Activity log</h2>
+    <pre id="log" aria-live="polite"></pre>
 
-  <div id="report"></div>
+    <div id="report"></div>
 
-  <h2>Live camera test</h2>
-  <p class="detail">The checks above only prove the APIs <em>exist</em>. This opens
-  the camera, reports its real resolution, and measures the true frame rate.</p>
-  <button id="startCam">Test camera</button>
-  <button id="stopCam" disabled>Stop</button>
-  <video id="cam" playsinline muted></video>
-  <div id="camResult"></div>
+    <h2>Live camera test</h2>
+    <p class="detail">The checks above only prove the APIs <em>exist</em>. This opens
+    the camera, reports its real resolution, and measures the true frame rate.</p>
+    <button id="startCam" type="button">Test camera</button>
+    <button id="stopCam" type="button" disabled>Stop</button>
+    <video id="cam" playsinline muted aria-label="Camera test preview"></video>
+    <div id="camResult" role="status" aria-live="polite"></div>
+  </main>
 
   <!-- Load order matters: log.js installs the error handler first, so it can
        still report a parse error in the scripts that follow. -->
