@@ -25,7 +25,8 @@ const roEvents = document.getElementById("roEvents");
 const roMeasure = document.getElementById("roMeasure");
 const roFindings = document.getElementById("roFindings");
 const roStored = document.getElementById("roStored");
-const exportObservations = document.getElementById("exportObservations");
+const shareObservationsCsv = document.getElementById("shareObservationsCsv");
+const shareObservationsJson = document.getElementById("shareObservationsJson");
 const storageStatus = document.getElementById("storageStatus");
 
 // Off-screen buffer we read pixels from (downscaled — CV doesn't need full
@@ -91,21 +92,40 @@ async function refreshStoredCount() {
   roStored.textContent = `${useCount} for this use · ${total} total`;
 }
 
-async function downloadObservations() {
+async function shareOrDownload({ text, type, extension }) {
+  const blob = new Blob([text], { type });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `lookout-observations-${stamp}.${extension}`;
+  const canCreateFile = typeof File !== "undefined";
+  const file = canCreateFile ? new File([blob], fileName, { type }) : null;
+  if (file && navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title: fileName });
+    return "shared";
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  return "downloaded";
+}
+
+async function shareObservations(format) {
   if (!observationStore) return;
   try {
-    const json = await observationStore.exportJSON({});
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    a.href = url;
-    a.download = `lookout-observations-${stamp}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    storageStatus.textContent = "exported observations JSON.";
+    const isCsv = format === "csv";
+    const text = isCsv
+      ? await observationStore.exportCSV({})
+      : await observationStore.exportJSON({});
+    const result = await shareOrDownload({
+      text,
+      type: isCsv ? "text/csv" : "application/json",
+      extension: isCsv ? "csv" : "json",
+    });
+    storageStatus.textContent = `${result} observations ${format.toUpperCase()}.`;
   } catch (e) {
-    storageStatus.textContent = "export failed: " + e.message;
+    if (e.name !== "AbortError") storageStatus.textContent = "share failed: " + e.message;
   }
 }
 
@@ -205,7 +225,8 @@ function installUseOptions() {
 
 document.getElementById("start").addEventListener("click", start);
 document.getElementById("stop").addEventListener("click", stop);
-exportObservations.addEventListener("click", downloadObservations);
+shareObservationsCsv.addEventListener("click", () => shareObservations("csv"));
+shareObservationsJson.addEventListener("click", () => shareObservations("json"));
 useSelect.addEventListener("change", () => {
   selectUse(useSelect.value);
   status.textContent = `${activeUse.name} selected. ${activeUse.mode === "change" ? "Change-mode use." : "Camera shows the live pipeline."}`;

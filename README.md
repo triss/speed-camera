@@ -72,7 +72,7 @@ Under `web/`:
   (motion), `track` (ground-contact), `locate` (pluggable backends — only
   `BearingOnly` is implemented; the rest throw "needs calibration/reference"),
   `derive` (pure aggregation helpers), `pipeline` (composes them per use) and
-  `store` (IndexedDB observation persistence with JSON export).
+  `store` (IndexedDB observation persistence with CSV/JSON export).
 - `web/js/uses/` — each use is **built from those components**: it names a
   locate backend and supplies `measure()` / `deriveFindings()`. `count` is
   fully implemented; others have real findings but stub the measurement that
@@ -130,7 +130,7 @@ projection from that JSON is still TODO.
 - [ ] Generalise the event/measurement model beyond speed (count, dwell, direction)
 - [ ] Slow **change detection** mode (reference / time-lapse difference)
 - [ ] Robustness on messy footage: multiple objects, occlusion, warm-up trimming
-- [x] Basic on-device observation log (IndexedDB) + JSON export
+- [x] Basic on-device observation log (IndexedDB) + CSV/JSON export
 - [ ] One-tap finding share
 - [ ] Optional lightweight classification (person / vehicle / animal)
 - [ ] Unattended capture for an always-on sensor

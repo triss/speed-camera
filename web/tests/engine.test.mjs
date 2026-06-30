@@ -4,6 +4,7 @@ import { getUse } from "../js/uses/index.js";
 import { createPipeline } from "../js/engine/pipeline.js";
 import { percentile, mean, sessionize } from "../js/engine/derive.js";
 import { createLocator } from "../js/engine/locate.js";
+import { observationsToCSV } from "../js/engine/store.js";
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -43,6 +44,9 @@ const cpStored = createPipeline(getUse("count"), { onObservation: (o) => persist
 t = 0;
 for (let bx = 80; bx <= 240; bx += 8) cpStored.process(frame(bx), { width: W, height: H, t: (t += 50) });
 truthy("pipeline emits persistable observations", persisted.length === 1 && persisted[0].use === "count" && persisted[0].t, JSON.stringify(persisted));
+eq("observationsToCSV escapes cells", observationsToCSV([
+  { id: 1, use: "count", t: 1000, direction: "left, then right", note: 'said "go"' },
+]), 'id,use,t,direction,note\n1,count,1000,"left, then right","said ""go"""\n');
 
 // SPEED: measure stubs (needs calibration), deriveFindings real
 const speed = getUse("speed");

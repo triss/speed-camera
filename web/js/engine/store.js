@@ -27,6 +27,49 @@ function txStore(db, mode) {
   return tx.objectStore(STORE_NAME);
 }
 
+function csvCell(value) {
+  if (value === null || typeof value === "undefined") return "";
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+export function observationsToCSV(observations) {
+  const preferred = ["id", "use", "t"];
+  const keys = new Set(preferred);
+  for (const observation of observations) {
+    for (const key of Object.keys(observation)) keys.add(key);
+  }
+  const rest = Array.from(keys)
+    .filter((key) => !preferred.includes(key))
+    .sort();
+  const header = preferred.filter((key) => keys.has(key)).concat(rest);
+  const rows = [header.join(",")];
+  for (const observation of observations) {
+    rows.push(header.map((key) => csvCell(observation[key])).join(","));
+  }
+  return rows.join("\n") + "\n";
+}
+
+function collectObservations(db, { use } = {}) {
+  const store = txStore(db, "readonly");
+  const results = [];
+  return new Promise((resolve, reject) => {
+    let cursor;
+    if (use) {
+      const range = IDBKeyRange.bound([use, 0], [use, Infinity]);
+      cursor = store.index("use_t").openCursor(range);
+    } else {
+      cursor = store.index("t").openCursor();
+    }
+    cursor.onsuccess = () => {
+      const c = cursor.result;
+      if (c) { results.push(c.value); c.continue(); }
+      else resolve(results);
+    };
+    cursor.onerror = () => reject(cursor.error);
+  });
+}
+
 // ── open / create ──────────────────────────────────────────────────────────
 
 function openDB() {
@@ -151,30 +194,18 @@ function createStore(db) {
 
     /** Export observations as a JSON string. Optional { use } filter. */
     async exportJSON({ use } = {}) {
-      // Get all (no limit) for export.
-      const store = txStore(db, "readonly");
-      const results = [];
-      return new Promise((resolve, reject) => {
-        let cursor;
-        if (use) {
-          const range = IDBKeyRange.bound([use, 0], [use, Infinity]);
-          cursor = store.index("use_t").openCursor(range);
-        } else {
-          cursor = store.index("t").openCursor();
-        }
-        cursor.onsuccess = () => {
-          const c = cursor.result;
-          if (c) { results.push(c.value); c.continue(); }
-          else {
-            resolve(JSON.stringify({
-              exported: new Date().toISOString(),
-              count: results.length,
-              observations: results,
-            }, null, 2));
-          }
-        };
-        cursor.onerror = () => reject(cursor.error);
-      });
+      const observations = await collectObservations(db, { use });
+      return JSON.stringify({
+        exported: new Date().toISOString(),
+        count: observations.length,
+        observations,
+      }, null, 2);
+    },
+
+    /** Export observations as CSV. Optional { use } filter. */
+    async exportCSV({ use } = {}) {
+      const observations = await collectObservations(db, { use });
+      return observationsToCSV(observations);
     },
 
     /** Oldest observation timestamp, or null. */
@@ -224,6 +255,7 @@ function noopStore() {
     countByUse() { return {}; },
     clear() {},
     exportJSON() { return JSON.stringify({ exported: new Date().toISOString(), count: 0, observations: [] }); },
+    exportCSV() { return observationsToCSV([]); },
     oldestTimestamp() { return null; },
   };
 }
