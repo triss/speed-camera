@@ -89,8 +89,10 @@ Camera processing happens locally in the page.
 ## Calibration
 
 UK dashed lane lines are a standard 6 m mark + 9 m gap — a free ruler painted on the
-road. The web calibration UI is still a TODO. It should let the user tap four or
-more image points and enter their matching real-world metre positions:
+road. `web/pipeline-locate.html` includes a point collector: load or take a
+calibration image, tap four or more known points on the same flat plane, enter
+their real-world metre positions, then copy or download the JSON. Pixel-to-ground
+projection from that JSON is still TODO.
 
 ```json
 {

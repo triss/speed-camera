@@ -21,20 +21,50 @@
     <h1>Locate</h1>
     <p class="lead">How it works: a calibration tells lookout how a flat ground shape in the camera maps to real metres on the ground.</p>
     <p>Child version: the camera photo is like a squashed drawing of the road. Calibration is the trick that unsquashes the drawing so we can use a ruler.</p>
+    <p>To collect points, take or upload a photo from the same fixed camera view. Put several known points on the same flat plane you want to measure. A ruler works for a close-up test: place it flat, click its carefully visible top corners or tick marks, and enter their real positions. For a road or path, use four or more known points spread across the ground plane.</p>
 
-    <section class="demo" aria-labelledby="demoHeading">
-      <h2 id="demoHeading">Demo</h2>
-      <p class="demo-output">No live webcam demo here yet. A correct locate demo needs calibration points for this camera view, otherwise it would pretend pixels are real metres without proof.</p>
+    <section class="demo calibration-tool" aria-labelledby="calibrationHeading">
+      <h2 id="calibrationHeading">Collect Calibration Points</h2>
+      <div class="field">
+        <label for="calibrationImage">Calibration image</label>
+        <input id="calibrationImage" type="file" accept="image/*" capture="environment">
+      </div>
+      <canvas id="calibrationCanvas" class="demo-canvas" aria-label="Calibration image. Click known points on the image."></canvas>
+      <p id="calibrationStatus" class="demo-output" role="status" aria-live="polite">Load or take a calibration image, then click known points.</p>
+      <div class="demo-actions">
+        <button id="undoPoint" type="button" disabled>Undo point</button>
+        <button id="clearPoints" type="button" disabled>Clear points</button>
+        <button id="copyCalibration" type="button" disabled>Copy JSON</button>
+        <button id="downloadCalibration" type="button" disabled>Download JSON</button>
+      </div>
+      <div class="calibration-table-wrap">
+        <table class="calibration-table">
+          <caption>Image points and matching real-world positions in metres</caption>
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Image x,y</th>
+              <th scope="col">World X m</th>
+              <th scope="col">World Y m</th>
+            </tr>
+          </thead>
+          <tbody id="calibrationRows"></tbody>
+        </table>
+      </div>
+      <label class="visually-hidden" for="calibrationJson">Calibration JSON</label>
+      <textarea id="calibrationJson" class="calibration-json" readonly></textarea>
     </section>
 
     <section aria-labelledby="codeHeading">
       <h2 id="codeHeading">Where the code is</h2>
-      <p>Presets declare which locate backend they need with the <code>locate</code> field in <code>web/js/engine/preset.js</code>. Browser calibration and pixel-to-ground projection are still TODO.</p>
+      <p>The point collector lives in <code>web/js/calibration-points.js</code>. Presets declare which locate backend they need with the <code>locate</code> field in <code>web/js/engine/preset.js</code>. Pixel-to-ground projection is still TODO.</p>
       <ul class="code-links">
+        <li><a href="https://github.com/triss/lookout/blob/main/web/js/calibration-points.js">web/js/calibration-points.js</a></li>
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/engine/preset.js">web/js/engine/preset.js</a></li>
         <li><a href="https://github.com/triss/lookout/tree/main/web/js/presets">web/js/presets/</a></li>
       </ul>
     </section>
   </main>
+  <script type="module" src="js/calibration-points.js"></script>
 </body>
 </html>
