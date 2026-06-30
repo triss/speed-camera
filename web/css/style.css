@@ -391,6 +391,20 @@ li + li { margin-top: .3rem; }
   margin-bottom: .65rem;
 }
 
+.range-control {
+  display: grid;
+  gap: .35rem;
+  max-width: 28rem;
+  margin: .5rem 0 .65rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.range-control input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
 .demo-canvas {
   display: block;
   width: 100%;

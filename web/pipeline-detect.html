@@ -24,11 +24,20 @@
     <p>The web version turns each frame into greyscale first, because brightness changes are cheaper to compare than full colour. It subtracts the previous frame from the current frame. Small changes are ignored as noise; larger changes become a motion mask. The first demo shows that mask summarized as a smooth box. The second demo shows the mask itself.</p>
     <p class="note">The webcam demo asks for camera permission and works on HTTPS or localhost.</p>
 
-    <section class="demo" data-downsample-demo aria-labelledby="downsampleHeading">
-      <h2 id="downsampleHeading">How Downsampling Works</h2>
-      <p>Camera frames can be large. The demo reads a smaller processing image first: <code>160 x 90</code> pixels. One small processing pixel stands in for a block of camera pixels. That loses fine detail, but it is much cheaper and still good enough to notice bigger motion.</p>
-      <canvas class="demo-canvas" aria-label="Diagram showing a large camera grid becoming a smaller processing grid"></canvas>
-      <p class="demo-output">The yellow block of camera pixels becomes one processing pixel. The code sets this with <code>PROC_W</code> and <code>PROC_H</code>.</p>
+    <section class="demo" data-downsample-camera aria-labelledby="downsampleHeading">
+      <h2 id="downsampleHeading">Demo: Camera Downsampling</h2>
+      <p>Camera frames can be large. This demo first draws the camera into a smaller processing image, then stretches that small image back up so you can see what the computer sees. Lower settings are blockier but cheaper. Higher settings keep more detail but do more work.</p>
+      <div class="demo-actions">
+        <button type="button" data-camera-start>Start webcam demo</button>
+        <button type="button" data-camera-stop disabled>Stop webcam</button>
+      </div>
+      <label class="range-control" for="downsampleAmount">
+        Processing width
+        <input id="downsampleAmount" data-downsample-range type="range" min="32" max="320" step="16" value="160">
+      </label>
+      <canvas class="demo-canvas" aria-label="Live webcam downsampled to the selected processing resolution"></canvas>
+      <p class="demo-output" data-demo-output>Start the webcam, then move the slider to change downsampling.</p>
+      <pre class="demo-log" data-demo-log aria-label="Downsampling demo log"></pre>
     </section>
 
     <section class="demo" data-webcam="difference" aria-labelledby="demoHeading">
@@ -56,7 +65,7 @@
 
     <section aria-labelledby="codeHeading">
       <h2 id="codeHeading">Where the code is</h2>
-      <p>The webcam demos implement this stage with <code>PROC_W</code>, <code>PROC_H</code>, <code>drawCameraFrame()</code>, <code>toGray()</code>, <code>changedRegion()</code>, <code>drawRegion()</code>, and <code>drawMask()</code> in <code>web/js/pipeline-demos.js</code>. The main app scaffold uses <code>PROC_W</code>, <code>toGray()</code>, and <code>motionEnergy()</code> in <code>web/js/app.js</code>.</p>
+      <p>The webcam demos implement this stage with <code>PROC_W</code>, <code>PROC_H</code>, <code>installDownsampleDemo()</code>, <code>drawCameraFrame()</code>, <code>toGray()</code>, <code>changedRegion()</code>, <code>drawRegion()</code>, and <code>drawMask()</code> in <code>web/js/pipeline-demos.js</code>. The main app scaffold uses <code>PROC_W</code>, <code>toGray()</code>, and <code>motionEnergy()</code> in <code>web/js/app.js</code>.</p>
       <ul class="code-links">
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/pipeline-demos.js">web/js/pipeline-demos.js</a></li>
         <li><a href="https://github.com/triss/lookout/blob/main/web/js/app.js">web/js/app.js</a></li>

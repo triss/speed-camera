@@ -5,80 +5,105 @@ const PROC_H = 90;
 
 function installDownsampleDemo(root) {
   const canvas = root.querySelector("canvas");
-  if (!canvas) return;
+  const output = root.querySelector("[data-demo-output]");
+  const log = root.querySelector("[data-demo-log]");
+  const start = root.querySelector("[data-camera-start]");
+  const stop = root.querySelector("[data-camera-stop]");
+  const range = root.querySelector("[data-downsample-range]");
+  if (!canvas || !output || !start || !stop || !range) return;
+
   const ctx = canvas.getContext("2d");
+  const video = document.createElement("video");
+  const work = document.createElement("canvas");
+  const workCtx = work.getContext("2d");
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
 
-  ctx.fillStyle = "#050607";
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  ctx.fillStyle = "#f2f4f7";
-  ctx.font = "700 17px system-ui, sans-serif";
-  ctx.fillText("Camera frame", 38, 36);
-  ctx.fillText("Processing frame", 380, 36);
+  let stream = null;
+  let rafId = 0;
+  let lastLogAt = 0;
 
-  const big = { x: 42, y: 62, cell: 24, cols: 10, rows: 7 };
-  const small = { x: 405, y: 78, cell: 30, cols: 5, rows: 4 };
-
-  ctx.strokeStyle = "#3a424d";
-  ctx.lineWidth = 1;
-  for (let y = 0; y <= big.rows; y++) {
-    ctx.beginPath();
-    ctx.moveTo(big.x, big.y + y * big.cell);
-    ctx.lineTo(big.x + big.cols * big.cell, big.y + y * big.cell);
-    ctx.stroke();
-  }
-  for (let x = 0; x <= big.cols; x++) {
-    ctx.beginPath();
-    ctx.moveTo(big.x + x * big.cell, big.y);
-    ctx.lineTo(big.x + x * big.cell, big.y + big.rows * big.cell);
-    ctx.stroke();
+  function clearCanvas() {
+    ctx.fillStyle = "#050607";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
   }
 
-  ctx.fillStyle = "rgba(255, 209, 102, .36)";
-  ctx.fillRect(big.x + big.cell * 2, big.y + big.cell * 2, big.cell * 2, big.cell * 2);
-  ctx.strokeStyle = "#ffd166";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(big.x + big.cell * 2, big.y + big.cell * 2, big.cell * 2, big.cell * 2);
-
-  ctx.strokeStyle = "#8ab4ff";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(310, 146);
-  ctx.lineTo(372, 146);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(360, 134);
-  ctx.lineTo(372, 146);
-  ctx.lineTo(360, 158);
-  ctx.stroke();
-
-  ctx.strokeStyle = "#3a424d";
-  ctx.lineWidth = 1;
-  for (let y = 0; y <= small.rows; y++) {
-    ctx.beginPath();
-    ctx.moveTo(small.x, small.y + y * small.cell);
-    ctx.lineTo(small.x + small.cols * small.cell, small.y + y * small.cell);
-    ctx.stroke();
-  }
-  for (let x = 0; x <= small.cols; x++) {
-    ctx.beginPath();
-    ctx.moveTo(small.x + x * small.cell, small.y);
-    ctx.lineTo(small.x + x * small.cell, small.y + small.rows * small.cell);
-    ctx.stroke();
+  function currentSize() {
+    const width = Number(range.value);
+    const height = Math.max(1, Math.round(width * HEIGHT / WIDTH));
+    return { width, height };
   }
 
-  ctx.fillStyle = "#ffd166";
-  ctx.fillRect(small.x + small.cell, small.y + small.cell, small.cell, small.cell);
-  ctx.fillStyle = "#101214";
-  ctx.font = "700 13px system-ui, sans-serif";
-  ctx.fillText("1", small.x + small.cell + 11, small.y + small.cell + 20);
+  function setOutput(now = performance.now()) {
+    const { width, height } = currentSize();
+    const sourcePixels = WIDTH * HEIGHT;
+    const processingPixels = width * height;
+    const ratio = Math.round(sourcePixels / processingPixels);
+    const message = `Processing at ${width} x ${height}: about 1 processing pixel per ${ratio} display pixels.`;
+    output.textContent = message;
+    if (now - lastLogAt > 1400) {
+      appendLog(log, message);
+      lastLogAt = now;
+    }
+  }
 
-  ctx.fillStyle = "#bdc6d1";
-  ctx.font = "14px system-ui, sans-serif";
-  ctx.fillText("many camera pixels", 76, 260);
-  ctx.fillText("one cheaper pixel", 410, 260);
-  ctx.fillText("less detail, much less work", 214, 314);
+  function frame(now) {
+    if (!stream) return;
+    if (video.videoWidth) {
+      const { width, height } = currentSize();
+      work.width = width;
+      work.height = height;
+      workCtx.drawImage(video, 0, 0, width, height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(work, 0, 0, WIDTH, HEIGHT);
+      ctx.imageSmoothingEnabled = true;
+      setOutput(now);
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  async function begin() {
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+      output.textContent = "Webcam demo unavailable: this browser does not expose getUserMedia.";
+      appendLog(log, "webcam unavailable");
+      return;
+    }
+    output.textContent = "Requesting webcam permission...";
+    appendLog(log, "requesting webcam permission");
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    } catch (error) {
+      output.textContent = `Webcam failed: ${error.name}.`;
+      appendLog(log, `webcam failed: ${error.name}`);
+      return;
+    }
+    video.srcObject = stream;
+    video.muted = true;
+    video.playsInline = true;
+    await video.play().catch(() => {});
+    start.disabled = true;
+    stop.disabled = false;
+    appendLog(log, "webcam started");
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function end() {
+    if (rafId) cancelAnimationFrame(rafId);
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+    start.disabled = false;
+    stop.disabled = true;
+    clearCanvas();
+    output.textContent = "Webcam stopped.";
+    appendLog(log, "webcam stopped");
+  }
+
+  range.addEventListener("input", () => setOutput());
+  start.addEventListener("click", begin);
+  stop.addEventListener("click", end);
+  clearCanvas();
+  setOutput();
+  appendLog(log, "ready");
 }
 
 function toGray(imageData) {
@@ -352,4 +377,4 @@ function installWebcamDemo(root) {
 }
 
 document.querySelectorAll("[data-webcam]").forEach(installWebcamDemo);
-document.querySelectorAll("[data-downsample-demo]").forEach(installDownsampleDemo);
+document.querySelectorAll("[data-downsample-camera]").forEach(installDownsampleDemo);
