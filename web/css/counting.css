@@ -47,12 +47,12 @@ html, body.page-counting {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: .4rem;
   padding: .5rem calc(.6rem + env(safe-area-inset-right)) .5rem calc(.6rem + env(safe-area-inset-left));
   background: transparent;
 }
 #hudTop { top: 0; padding-top: calc(.5rem + env(safe-area-inset-top)); flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-#hudBottom { bottom: 0; padding-bottom: calc(.5rem + env(safe-area-inset-bottom)); }
+#hudTop { gap: .4rem; }
+#hudBottom { bottom: 0; gap: .08rem; padding-bottom: calc(.5rem + env(safe-area-inset-bottom)); }
 
 .chips { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
 .chip {
@@ -70,12 +70,19 @@ html, body.page-counting {
 .chip-warn { background: rgba(105, 34, 22, .72); border-color: rgba(255, 181, 166, .55); color: #fff2ee; }
 
 /* HUD buttons */
-#hudBottom .row { display: flex; gap: .4rem; flex-wrap: wrap; }
+#hudBottom .row {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+  padding: 0;
+  border-bottom: 0;
+}
 #hudBottom button {
   flex: 1 1 auto;
   min-height: 2.5rem;
   padding: .4rem .7rem;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
@@ -91,7 +98,7 @@ html, body.page-counting {
 .status-line {
   align-self: center;
   max-width: min(100%, 34rem);
-  margin: 0;
+  margin: .28rem 0 0;
   padding: .45rem .7rem;
   border: 1px solid rgba(255, 255, 255, .2);
   border-radius: 999px;
