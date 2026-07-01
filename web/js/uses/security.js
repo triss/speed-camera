@@ -2,20 +2,20 @@ import { defineUse } from "../engine/use.js";
 import { byHour } from "../engine/derive.js";
 
 // Security camera: a lightweight, on-device motion log for a doorway, yard, or
-// shed — not a cloud camera. Built from components: no positioning ("none"
-// locate) + byHour aggregation. measure() is stubbed until a monitored-zone
-// mask and arm/disarm schedule exist; the event findings are implemented.
+// shed — not a cloud camera. Built from existing components: no positioning
+// ("none" locate), whole-frame motion events, optional stills, and byHour
+// aggregation.
 export default defineUse({
   id: "security",
   name: "Security camera",
-  description: "Watch a doorway, yard, or shed and log when something moves in a chosen zone — a lightweight, on-device motion log with optional stills, not a cloud camera.",
+  description: "Watch a doorway, yard, or shed and log when something moves in the view — a lightweight, on-device motion log with optional stills, not a cloud camera.",
   mode: "motion",
   locate: "none",
   measurements: ["event", "zone", "time_of_day"],
   setup: [
     "Point the camera at the entrance or area to watch.",
-    "Draw the zone that should trigger an alert.",
-    "Arm it when you leave; review the on-device log later.",
+    "Keep the phone fixed while it is watching.",
+    "Review the on-device event log and optional stills later.",
   ],
   outputs: [
     "Motion-event timestamps",
@@ -23,18 +23,23 @@ export default defineUse({
     "Optional still per event",
   ],
 
-  measureStatus: "Needs a monitored-zone mask and arm/disarm schedule before it can log intrusions.",
+  measureStatus: "implemented",
   config: {
     "Sensing mode": "motion (frame-to-frame difference)",
     "Locate backend": "none (position not needed)",
-    "Monitored zone": "not yet provided (whole frame for now)",
-    "Arming": "manual only; no schedule yet",
+    "Monitored zone": "whole frame",
+    "Arming": "manual start/pause only",
     "Logged": "motion events by time, optional still per event",
     "Leaves device": "event log stays local; stills shared only on explicit action",
   },
 
-  measure() {
-    throw new Error("security: needs a monitored-zone mask + arm/disarm schedule — not wired yet");
+  measure(track) {
+    return {
+      event: 1,
+      zone: "whole_frame",
+      duration_ms: track.duration_ms ?? track.durationMs ?? null,
+      frames_seen: track.frames_seen ?? track.framesSeen ?? null,
+    };
   },
 
   deriveFindings(observations) {

@@ -2,83 +2,196 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>lookout · security camera</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="css/counting.css">
+  <link rel="stylesheet" href="css/capture.css">
+  <script src="js/theme.js?v=settings-theme-only"></script>
 </head>
-<body class="page-use" data-use="security">
-  <a class="skip-link" href="#content">Skip to content</a>
-  <header class="site-header">
-    <a class="brand" href="index.html">lookout</a>
-    <nav class="top-nav" aria-label="Primary">
-      <a href="pipeline.html">Pipeline</a>
-      <a href="check.html">Capability check</a>
-    </nav>
+<body class="page-counting">
+  <div id="stage">
+    <video id="cam" playsinline muted autoplay aria-label="Live camera preview"></video>
+    <canvas id="draw" aria-label="Motion overlay"></canvas>
+  </div>
+
+  <header id="hudTop" aria-label="Live security totals">
+    <div class="chips">
+      <span class="chip chip-total"><b id="cEvents">0</b> events</span>
+      <span class="chip"><b id="cTracks">0</b> tracks</span>
+      <span class="chip"><b id="cFps">-</b> fps</span>
+    </div>
+    <div class="chips right">
+      <span id="warnBattery" class="chip chip-warn" hidden></span>
+      <span id="warnDisk" class="chip chip-warn" hidden></span>
+    </div>
   </header>
-  <main id="content" class="use-layout">
-    <article class="use-panel">
-      <p class="eyebrow">Engine use</p>
-      <h1 id="useTitle">Security camera</h1>
-      <p id="useDescription" class="lead"></p>
+
+  <footer id="hudBottom">
+    <div class="row">
+      <button id="btnCamera" type="button" class="primary">Start camera</button>
+      <button id="btnSwitch" class="small" type="button" disabled title="Switch camera">Switch camera</button>
+      <button id="btnViewStills" class="small" type="button" title="View stills">Stills</button>
+    </div>
+    <div class="row">
+      <button id="btnHelp" type="button">How this works</button>
+      <button id="btnSettings" type="button">Settings</button>
+      <button id="btnExport" type="button">Share data</button>
+    </div>
+    <p id="status" role="status" aria-live="polite" class="status-line">Start the camera to watch this view for motion. Stills stay on this device unless you share them.</p>
+  </footer>
+
+  <section id="panelHelp" class="sheet" hidden aria-label="How this works">
+    <div class="sheet-head"><h2>How this works</h2><button class="sheet-close" data-close>✕</button></div>
+    <div class="sheet-body">
+      <p><strong>Motion log, not a cloud camera.</strong> lookout compares small frames on this device, watches for sustained motion in the whole view, and stores timestamped observations. If still capture is enabled, it also saves one JPEG when motion triggers an event.</p>
+      <p>Use it for a doorway, shed, yard, hallway, gate, or shared room where you want a local record of when something moved. The app does not identify people, faces, or vehicles. It records motion events and optional stills for later review.</p>
+      <ol>
+        <li>Set the phone somewhere stable with a clear view of the area. A shelf, tripod, window ledge, or fixed mount works best.</li>
+        <li>Press <strong>Start camera</strong>. The page asks for fullscreen, starts the camera, and begins watching immediately.</li>
+        <li>Do not move, rotate, or bump the phone once it is watching. If the view changes, pause and restart the camera so the detector settles again.</li>
+        <li>Use <strong>Stills</strong> to review captured images. Use <strong>Share data</strong> only when you deliberately want to export observations or stills.</li>
+      </ol>
+      <p><strong>Fix common problems in Settings.</strong> If shadows, rain, leaves, or screen reflections trigger too many events, raise <em>Sensitivity threshold</em>, raise <em>Minimum size</em>, or raise <em>Minimum motion duration</em>. If repeated movement creates too many images, raise <em>Event cooldown</em>. If motion is missed, lower <em>Sensitivity threshold</em> or <em>Minimum motion duration</em>. If the phone is slow, lower <em>Target FPS</em> or <em>Resolution</em>.</p>
+      <p class="muted">Stills may contain identifying imagery. They stay in browser storage on this device and are only included when you explicitly share stills or a bundle.</p>
+    </div>
+  </section>
+
+  <section id="panelSettings" class="sheet" hidden aria-label="Settings">
+    <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" data-close>✕</button></div>
+    <div class="sheet-body">
+      <fieldset>
+        <legend>Capture</legend>
+        <label class="check"><input type="checkbox" id="setCaptureStills" checked> Capture still on motion event</label>
+        <label class="check"><input type="checkbox" id="setShowOverlay" checked> Show motion overlay</label>
+        <p class="muted">Stills are saved locally in this browser. The overlay is only for setup and checking detection.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Camera</legend>
+        <label>Facing
+          <select id="setFacing"><option value="environment">Back</option><option value="user">Front</option></select>
+        </label>
+        <label>Resolution
+          <select id="setResolution"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+        </label>
+        <label class="number-control">Target FPS
+          <span class="number-row">
+            <input id="setFps" type="range" min="1" max="30" step="1" value="10">
+            <input id="setFpsNumber" type="number" min="1" max="30" step="1" value="10" inputmode="numeric" aria-label="Target FPS">
+          </span>
+        </label>
+        <label class="check"><input type="checkbox" id="setMirror"> Mirror preview</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Appearance</legend>
+        <label>Theme
+          <select id="themeSelect">
+            <option value="system">System</option>
+            <option value="dark">Dark</option>
+            <option value="beige">Beige</option>
+            <option value="blue">Blue</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Place</legend>
+        <label>Observation name
+          <input type="text" id="setName" value="security_watch" autocomplete="off">
+        </label>
+        <label>View type
+          <select id="setViewType"><option selected>doorway</option><option>yard</option><option>shed</option><option>hallway</option><option>gate</option><option>room</option><option>other</option></select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Motion trigger</legend>
+        <label class="number-control">Sensitivity threshold
+          <span class="number-row">
+            <input id="setSensitivity" type="range" min="8" max="48" step="1" value="24">
+            <input id="setSensitivityNumber" type="number" min="8" max="48" step="1" value="24" inputmode="numeric" aria-label="Sensitivity threshold">
+          </span>
+          <span class="muted">Lower numbers notice smaller changes; higher numbers ignore more noise.</span>
+        </label>
+        <label class="number-control">Minimum size
+          <span class="number-row">
+            <input id="setMinSize" type="range" min="1" max="80" step="1" value="14">
+            <input id="setMinSizeNumber" type="number" min="1" max="80" step="1" value="14" inputmode="numeric" aria-label="Minimum blob size">
+          </span>
+        </label>
+        <label class="number-control">Minimum motion duration (ms)
+          <span class="number-row">
+            <input id="setMinDuration" type="range" min="100" max="5000" step="100" value="1000">
+            <input id="setMinDurationNumber" type="number" min="100" max="5000" step="100" value="1000" inputmode="numeric" aria-label="Minimum motion duration in milliseconds">
+          </span>
+        </label>
+        <label class="number-control">Event cooldown (ms)
+          <span class="number-row">
+            <input id="setCooldown" type="range" min="500" max="30000" step="500" value="5000">
+            <input id="setCooldownNumber" type="number" min="500" max="30000" step="500" value="5000" inputmode="numeric" aria-label="Event cooldown in milliseconds">
+          </span>
+        </label>
+        <label class="number-control">Maximum lost frames
+          <span class="number-row">
+            <input id="setMaxLost" type="range" min="1" max="30" step="1" value="5">
+            <input id="setMaxLostNumber" type="number" min="1" max="30" step="1" value="5" inputmode="numeric" aria-label="Maximum lost frames">
+          </span>
+        </label>
+      </fieldset>
+    </div>
+  </section>
+
+  <section id="panelExport" class="sheet" hidden aria-label="Share data">
+    <div class="sheet-head"><h2>Share data</h2><button class="sheet-close" data-close>✕</button></div>
+    <div class="sheet-body">
       <dl class="facts">
-        <div><dt>Mode</dt><dd id="modeValue"></dd></div>
-        <div><dt>Locate backend</dt><dd id="locateValue"></dd></div>
-        <div><dt>Measurements</dt><dd id="measurementsValue"></dd></div>
+        <div><dt>Stored observations</dt><dd id="storedCount">-</dd></div>
+        <div><dt>Stored stills</dt><dd id="storedStills">-</dd></div>
+        <div><dt>Storage used</dt><dd id="storageUsed">-</dd></div>
+        <div><dt>Last event</dt><dd id="lastEvent">-</dd></div>
+        <div><dt>Session</dt><dd id="sessionId">-</dd></div>
       </dl>
-      <section aria-labelledby="setupHeading">
-        <h2 id="setupHeading">Setting it up</h2>
-        <div id="setupList"></div>
-      </section>
-      <section aria-labelledby="outputsHeading">
-        <h2 id="outputsHeading">What you get out</h2>
-        <div id="outputsList"></div>
-      </section>
-      <section aria-labelledby="modulesHeading">
-        <h2 id="modulesHeading">Modules in the pipeline</h2>
-        <p class="note">Every module this use runs, in order. A <strong>stub</strong> badge means that step is not implemented yet. Each links to its source so you can check exactly what runs.</p>
-        <ol id="pipelineModules" class="module-list"></ol>
-      </section>
-      <section aria-labelledby="configHeading">
-        <h2 id="configHeading">Configuration</h2>
-        <p class="note">How this use is set up, and what is allowed to leave the device.</p>
-        <dl id="useConfig" class="config-list"></dl>
-      </section>
-      <section aria-labelledby="cameraTitle">
-        <h2 id="cameraTitle">Camera Scaffold</h2>
-        <div id="stage">
-          <video id="video" playsinline muted aria-label="Live camera preview"></video>
-          <canvas id="overlay" aria-hidden="true"></canvas>
-        </div>
+      <div class="row wrap">
+        <button id="btnCsv" type="button">Share observations CSV</button>
+        <button id="btnJson" type="button">Share observations JSON</button>
+        <button id="btnShareStills" type="button" disabled>Share stills</button>
+        <button id="btnShareBundle" type="button" disabled>Share bundle ZIP</button>
+      </div>
+      <button id="btnClear" type="button" class="danger">Clear local observations</button>
+      <p class="muted">CSV/JSON contain measurements. Stills stay on this device unless you choose <strong>Share stills</strong> or <strong>Share bundle ZIP</strong>.</p>
+    </div>
+  </section>
 
-        <div class="controls">
-          <button id="start" type="button"><span class="icon" aria-hidden="true">▶</span>Start camera</button>
-          <button id="stop" type="button" disabled><span class="icon" aria-hidden="true">■</span>Stop</button>
+  <div id="viewerContainer" class="fullscreen-viewer" hidden>
+    <div class="viewer-header">
+      <button id="btnViewerBack" class="viewer-btn">Back</button>
+      <span id="viewerTitle">Security stills</span>
+      <button id="btnToggleMetadata" class="viewer-btn">Hide info</button>
+    </div>
+    <div class="viewer-body">
+      <div id="viewerImageContainer">
+        <img id="viewerImg" alt="Captured security still" src="">
+        <div id="viewerMetadata" class="viewer-metadata">
+          <div class="meta-row"><strong>Time:</strong> <span id="metaTime"></span></div>
+          <div class="meta-row"><strong>Mode:</strong> <span id="metaMode"></span></div>
+          <div class="meta-row"><strong>Track ID:</strong> <span id="metaTrackId"></span></div>
+          <div class="meta-row"><strong>Duration:</strong> <span id="metaDuration"></span></div>
+          <div class="meta-row"><strong>Confidence:</strong> <span id="metaConfidence"></span></div>
+          <div class="meta-row"><strong>Session:</strong> <span id="metaSession"></span></div>
         </div>
-        <p id="status" role="status" aria-live="polite">Idle. New here? Run the <a href="check.html">capability check</a> first.</p>
-      </section>
+      </div>
+      <div id="viewerEmpty" hidden>No stills captured yet.</div>
+    </div>
+    <div class="viewer-footer">
+      <button id="btnViewerPrev" class="viewer-btn">Previous</button>
+      <span id="viewerPageNum">0 of 0</span>
+      <button id="btnViewerNext" class="viewer-btn">Next</button>
+    </div>
+  </div>
 
-      <section class="engine-readout" aria-labelledby="readoutTitle">
-        <h2 id="readoutTitle">Engine readout</h2>
-        <dl class="facts">
-          <div><dt>Sensing mode</dt><dd id="roMode">—</dd></div>
-          <div><dt>Locate backend</dt><dd id="roLocate">—</dd></div>
-          <div><dt>Measurements</dt><dd id="roMeasurements">—</dd></div>
-          <div><dt>Detection events</dt><dd id="roEvents">0</dd></div>
-          <div><dt>Stored observations</dt><dd id="roStored">opening local store...</dd></div>
-          <div><dt>measure()</dt><dd id="roMeasure">idle</dd></div>
-          <div><dt>deriveFindings()</dt><dd id="roFindings">idle</dd></div>
-        </dl>
-        <div class="controls">
-          <button id="shareObservationsCsv" type="button"><span class="icon" aria-hidden="true">⬇</span>Share observations CSV</button>
-          <button id="shareObservationsJson" type="button"><span class="icon" aria-hidden="true">⬇</span>Share observations JSON</button>
-          <button id="shareObservationStills" type="button"><span class="icon" aria-hidden="true">⬇</span>Share observation stills</button>
-        </div>
-        <p id="storageStatus" class="note" role="status" aria-live="polite">Opening local observation store... Stills may contain identifying imagery; share them deliberately.</p>
-      </section>
-    </article>
-  </main>
-  <script type="module" src="js/use-page.js"></script>
-  <script type="module" src="js/app.js"></script>
+  <div id="scrim" hidden></div>
+  <script type="module" src="js/security/app.js"></script>
 </body>
 </html>
