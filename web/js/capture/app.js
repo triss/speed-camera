@@ -1,22 +1,23 @@
-// Counting MVP. Full-screen camera + a line the user draws; count crossings,
-// not people. All processing and storage are local. Composed from small pure
-// modules (blobs, tracker, crossing) + the shared IndexedDB observation store.
+// Capture Use. Full-screen camera + user-drawn line.
+// Counts crossings and records stills for each crossing if enabled.
+// Provides an interactive stills browser with toggleable metadata overlays.
 import { toGray } from "../engine/gray.js";
-import { extractBlobs } from "./blobs.js";
-import { createMultiTracker } from "./tracker.js";
-import { crossingDirection, countsForMode } from "./crossing.js";
+import { extractBlobs } from "../counting/blobs.js";
+import { createMultiTracker } from "../counting/tracker.js";
+import { crossingDirection, countsForMode } from "../counting/crossing.js";
 import { openObservationStore } from "../engine/store.js";
 
-const USE = "counting";
+const USE = "capture";
 const PROC_W = 176; // processing width; keep small for old phones
 
 const RES_WIDTH = { low: 320, medium: 640, high: 1280 };
 
 const settings = {
   facing: "environment", resolution: "medium", targetFps: 10, mirror: false,
-  name: "untitled_observation", viewType: "other",
+  name: "untitled_capture", viewType: "other",
   directionMode: "separate", sensitivity: 24, minSize: 14,
   minDurationMs: 1000, cooldownMs: 3000, maxLost: 5,
+  captureStills: true,
 };
 
 // ── DOM ──────────────────────────────────────────────────────────────────
@@ -43,6 +44,14 @@ let drawMode = false, pendingA = null;
 let totals = { aToB: 0, bToA: 0, total: 0, lastEvent: null };
 let lastProcT = 0, fpsEMA = 0, rafId = 0;
 let flashes = [];
+
+// ── Stills Viewer State ──────────────────────────────────────────────────
+let viewerActive = false;
+let viewerMediaList = [];
+let viewerObsMap = new Map();
+let viewerIndex = 0;
+let metadataVisible = true;
+let currentImageUrl = null;
 
 // ── Cover-fit mapping between screen pixels and the video's intrinsic frame ──
 function coverMap() {
@@ -136,6 +145,7 @@ window.addEventListener("resize", () => { if (cameraOn) resizeOverlay(); });
 function loop() {
   if (!cameraOn) return;
   rafId = requestAnimationFrame(loop);
+
   const now = performance.now();
   const interval = 1000 / settings.targetFps;
   if (now - lastProcT < interval) { render([]); return; }
@@ -181,6 +191,25 @@ function countCrossings(tracks, t) {
   }
 }
 
+// Helper to capture a JPEG frame from the live video
+function captureStillBlob() {
+  if (!cam.videoWidth || !cam.videoHeight) return Promise.resolve(null);
+  const cap = document.createElement("canvas");
+  cap.width = cam.videoWidth;
+  cap.height = cam.videoHeight;
+  const cctx = cap.getContext("2d");
+  
+  if (settings.mirror) {
+    cctx.translate(cap.width, 0);
+    cctx.scale(-1, 1);
+  }
+  cctx.drawImage(cam, 0, 0);
+  
+  return new Promise((resolve) => {
+    cap.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
+  });
+}
+
 async function recordCrossing(tr, dir, t) {
   totals.total++;
   if (dir === "A_to_B") totals.aToB++; else if (dir === "B_to_A") totals.bToA++;
@@ -189,6 +218,7 @@ async function recordCrossing(tr, dir, t) {
   $("cAB").textContent = totals.aToB;
   $("cBA").textContent = totals.bToA;
   flashes.push({ dir, t: performance.now() });
+  
   const confidence = Math.min(1, tr.framesSeen / 12);
   const obs = {
     use: USE, t,
@@ -197,17 +227,47 @@ async function recordCrossing(tr, dir, t) {
     direction: dir, duration_ms: tr.lastT - tr.firstT, frames_seen: tr.framesSeen,
     confidence: Math.round(confidence * 100) / 100, class_hint: "unknown",
   };
-  try { if (store) await store.add(obs); } catch (e) { statusLine.textContent = "storage failed: " + e.message; }
+  
+  let stillBlob = null;
+  let filename = `${USE}_${t}.jpg`;
+  if (dir === "A_to_B") {
+    filename = `A-to-B_${t}.jpg`;
+  } else if (dir === "B_to_A") {
+    filename = `B-to-A_${t}.jpg`;
+  } else if (settings.name && settings.name !== "untitled_capture") {
+    filename = `${settings.name.replace(/[^a-zA-Z0-9_-]/g, "-")}_${t}.jpg`;
+  }
+
+  if (settings.captureStills) {
+    try {
+      stillBlob = await captureStillBlob();
+    } catch (e) {
+      console.error("Failed to capture still:", e);
+    }
+  }
+
+  try { 
+    if (store) {
+      await store.add(obs, stillBlob ? { still: stillBlob, filename } : {});
+      if (viewerActive) {
+        await refreshViewerData();
+      }
+    } 
+  } catch (e) { 
+    statusLine.textContent = "storage failed: " + e.message; 
+  }
 }
 
 function render(tracks) {
   dctx.clearRect(0, 0, draw.width, draw.height);
   // Always show what is being tracked, so the user can see detection working.
-  dctx.strokeStyle = "rgba(110,231,155,.9)";
-  dctx.lineWidth = 1.5;
-  for (const tr of tracks || []) {
-    const s = frameToScreen({ x: tr.cx / PROC_W, y: tr.cy / procH });
-    dctx.beginPath(); dctx.arc(s.x, s.y, 6, 0, Math.PI * 2); dctx.stroke();
+  {
+    dctx.strokeStyle = "rgba(110,231,155,.9)";
+    dctx.lineWidth = 1.5;
+    for (const tr of tracks || []) {
+      const s = frameToScreen({ x: tr.cx / PROC_W, y: tr.cy / procH });
+      dctx.beginPath(); dctx.arc(s.x, s.y, 6, 0, Math.PI * 2); dctx.stroke();
+    }
   }
   const a = drawMode && pendingA ? pendingA : line?.a;
   const b = line?.b;
@@ -407,6 +467,7 @@ bind("setFacing", "facing"); bind("setResolution", "resolution");
 bind("setMirror", "mirror");
 bind("setName", "name"); bind("setViewType", "viewType");
 bind("setDirection", "directionMode");
+bind("setCaptureStills", "captureStills"); // Capture toggle binding!
 bindNumberPair("setFps", "setFpsNumber", "targetFps", () => { if (cameraOn) startCamera(); });
 bindNumberPair("setSensitivity", "setSensitivityNumber", "sensitivity");
 bindNumberPair("setMinSize", "setMinSizeNumber", "minSize");
@@ -416,12 +477,154 @@ bindNumberPair("setMaxLost", "setMaxLostNumber", "maxLost", () => {
   tracker = createMultiTracker({ maxLost: settings.maxLost });
 });
 
+// ── Stills Viewer Controller ─────────────────────────────────────────────
+async function enterViewer() {
+  viewerActive = true;
+  
+  // Hide only HUD overlays, but NOT the stage (video/canvas).
+  // The fullscreen-viewer has a higher z-index (100) and opaque background,
+  // so it will completely cover the stage visually without throttling browser video playback.
+  $("hudTop").style.display = "none";
+  $("hudBottom").style.display = "none";
+  $("viewerContainer").hidden = false;
+  
+  // Load data
+  try {
+    statusLine.textContent = "Loading stills...";
+    viewerMediaList = await store.listMedia({ use: USE, kind: "still", limit: 500 });
+    const obsList = await store.list({ use: USE, limit: 500 });
+    viewerObsMap = new Map(obsList.map(o => [o.id, o]));
+  } catch (e) {
+    console.error("Failed to load viewer data:", e);
+    viewerMediaList = [];
+  }
+  
+  viewerIndex = 0;
+  updateViewer();
+}
+
+function exitViewer() {
+  viewerActive = false;
+  
+  // Revoke object URL
+  if (currentImageUrl) {
+    URL.revokeObjectURL(currentImageUrl);
+    currentImageUrl = null;
+  }
+  
+  // Show main interface
+  $("hudTop").style.display = "flex";
+  $("hudBottom").style.display = "flex";
+  $("viewerContainer").hidden = true;
+  
+  statusLine.textContent = observing ? "Observing. Counting crossings." : "Paused.";
+}
+
+async function refreshViewerData() {
+  try {
+    const currentId = viewerMediaList[viewerIndex]?.id;
+    viewerMediaList = await store.listMedia({ use: USE, kind: "still", limit: 500 });
+    const obsList = await store.list({ use: USE, limit: 500 });
+    viewerObsMap = new Map(obsList.map(o => [o.id, o]));
+    
+    // Keep user on the same still if it still exists
+    if (currentId !== undefined) {
+      const newIndex = viewerMediaList.findIndex(m => m.id === currentId);
+      if (newIndex !== -1) {
+        viewerIndex = newIndex;
+      } else {
+        viewerIndex = Math.min(viewerIndex, viewerMediaList.length - 1);
+      }
+    } else {
+      viewerIndex = 0;
+    }
+    updateViewer();
+  } catch (e) {
+    console.error("Failed to refresh viewer data:", e);
+  }
+}
+
+function updateViewer() {
+  if (currentImageUrl) {
+    URL.revokeObjectURL(currentImageUrl);
+    currentImageUrl = null;
+  }
+  
+  if (viewerMediaList.length === 0) {
+    $("viewerImg").style.display = "none";
+    $("viewerMetadata").style.display = "none";
+    $("viewerEmpty").hidden = false;
+    $("viewerPageNum").textContent = "0 of 0";
+    $("btnViewerPrev").disabled = true;
+    $("btnViewerNext").disabled = true;
+    return;
+  }
+  
+  $("viewerImg").style.display = "block";
+  $("viewerMetadata").style.display = metadataVisible ? "block" : "none";
+  $("viewerEmpty").hidden = true;
+  
+  const media = viewerMediaList[viewerIndex];
+  const obs = viewerObsMap.get(media.observation_id);
+  
+  currentImageUrl = URL.createObjectURL(media.blob);
+  $("viewerImg").src = currentImageUrl;
+  
+  $("viewerPageNum").textContent = `${viewerIndex + 1} of ${viewerMediaList.length}`;
+  $("btnViewerPrev").disabled = viewerIndex === 0;
+  $("btnViewerNext").disabled = viewerIndex === viewerMediaList.length - 1;
+  
+  if (obs) {
+    $("metaTime").textContent = new Date(obs.t).toLocaleString();
+    $("metaDirection").textContent = obs.direction === "A_to_B" ? "A → B" : obs.direction === "B_to_A" ? "B → A" : obs.direction;
+    $("metaTrackId").textContent = `#${obs.track_id}`;
+    $("metaDuration").textContent = `${(obs.duration_ms / 1000).toFixed(1)}s`;
+    $("metaConfidence").textContent = `${Math.round(obs.confidence * 100)}%`;
+    $("metaSession").textContent = obs.session_id || "N/A";
+  } else {
+    $("metaTime").textContent = new Date(media.t).toLocaleString();
+    $("metaDirection").textContent = "N/A";
+    $("metaTrackId").textContent = "N/A";
+    $("metaDuration").textContent = "N/A";
+    $("metaConfidence").textContent = "N/A";
+    $("metaSession").textContent = "N/A";
+  }
+}
+
+// Viewer Listeners
+$("btnViewStills").addEventListener("click", () => enterViewer());
+$("btnViewerBack").addEventListener("click", () => exitViewer());
+$("btnToggleMetadata").addEventListener("click", () => {
+  metadataVisible = !metadataVisible;
+  $("viewerMetadata").style.display = metadataVisible ? "block" : "none";
+  $("btnToggleMetadata").textContent = metadataVisible ? "Hide Info" : "Show Info";
+});
+$("btnViewerPrev").addEventListener("click", () => {
+  if (viewerIndex > 0) {
+    viewerIndex--;
+    updateViewer();
+  }
+});
+$("btnViewerNext").addEventListener("click", () => {
+  if (viewerIndex < viewerMediaList.length - 1) {
+    viewerIndex++;
+    updateViewer();
+  }
+});
+
 // ── Export & data ────────────────────────────────────────────────────────────
 async function refreshExportPanel() {
   if (!store) return;
-  $("storedCount").textContent = await store.count({ use: USE });
+  const count = await store.count({ use: USE });
+  $("storedCount").textContent = count;
   $("sessionId").textContent = sessionId || "–";
   $("lastEvent").textContent = totals.lastEvent ? new Date(totals.lastEvent).toLocaleTimeString() : "–";
+  
+  // Update Share Stills and Share Bundle button states
+  const stillsCount = await store.countMedia({ use: USE });
+  $("btnShareStills").disabled = stillsCount === 0;
+  $("btnShareBundle").disabled = count === 0;
+
   if (navigator.storage?.estimate) {
     const { usage } = await navigator.storage.estimate();
     $("storageUsed").textContent = usage != null ? (usage / 1e6).toFixed(1) + " MB" : "n/a";
@@ -430,34 +633,296 @@ async function refreshExportPanel() {
 
 function download(text, type, ext) {
   const blob = new Blob([text], { type });
-  const name = `lookout-counting-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`;
+  const name = `lookout-capture-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`;
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = name; a.click();
   URL.revokeObjectURL(a.href);
+}
+
+async function shareOrDownloadMedia(records) {
+  if (!records.length) return "no stills";
+  const canCreateFile = typeof File !== "undefined";
+  const files = canCreateFile
+    ? records.map((record) => new File([record.blob], record.filename, { type: record.mime }))
+    : [];
+  if (files.length && navigator.canShare?.({ files })) {
+    try {
+      await navigator.share({ files, title: "lookout observation stills" });
+      return "shared";
+    } catch (e) {
+      if (e.name === "AbortError") return "cancelled";
+      console.warn("Share failed, falling back to download:", e);
+    }
+  }
+  for (const record of records) {
+    const url = URL.createObjectURL(record.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = record.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  return "downloaded";
+}
+
+// Pure JS Store-only (no-compression) ZIP generator.
+// Fast, memory-efficient, and runs natively on old smartphone browsers without libraries.
+function makeZip(files) {
+  const parts = [];
+  const centralDirectory = [];
+  let offset = 0;
+
+  const crcTable = [];
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    crcTable[i] = c;
+  }
+  
+  function getCrc(data) {
+    let crc = 0 ^ (-1);
+    for (let i = 0; i < data.length; i++) {
+      crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xff];
+    }
+    return (crc ^ (-1)) >>> 0;
+  }
+
+  const date = new Date();
+  const dosTime = ((date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() >> 1)) & 0xffff;
+  const dosDate = (((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate()) & 0xffff;
+
+  for (const file of files) {
+    const nameBytes = new TextEncoder().encode(file.name);
+    const dataBytes = file.data;
+    const crc = getCrc(dataBytes);
+    const size = dataBytes.length;
+
+    // Local Header (LFH)
+    const lfh = new Uint8Array(30 + nameBytes.length);
+    const view = new DataView(lfh.buffer);
+
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 10, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true); // store method
+    view.setUint16(10, dosTime, true);
+    view.setUint16(12, dosDate, true);
+    view.setUint32(14, crc, true);
+    view.setUint32(18, size, true);
+    view.setUint32(22, size, true);
+    view.setUint16(26, nameBytes.length, true);
+    view.setUint16(28, 0, true);
+    lfh.set(nameBytes, 30);
+
+    parts.push(lfh);
+    parts.push(dataBytes);
+
+    // Central Directory Header (CDH)
+    const cdh = new Uint8Array(46 + nameBytes.length);
+    const cdhView = new DataView(cdh.buffer);
+
+    cdhView.setUint32(0, 0x02014b50, true);
+    cdhView.setUint16(4, 20, true);
+    cdhView.setUint16(6, 10, true);
+    cdhView.setUint16(8, 0, true);
+    cdhView.setUint16(10, 0, true);
+    cdhView.setUint16(12, dosTime, true);
+    cdhView.setUint16(14, dosDate, true);
+    cdhView.setUint32(16, crc, true);
+    cdhView.setUint32(20, size, true);
+    cdhView.setUint32(24, size, true);
+    cdhView.setUint16(28, nameBytes.length, true);
+    cdhView.setUint16(30, 0, true);
+    cdhView.setUint16(32, 0, true);
+    cdhView.setUint16(34, 0, true);
+    cdhView.setUint16(36, 0, true);
+    cdhView.setUint32(38, 0, true);
+    cdhView.setUint32(42, offset, true);
+    cdh.set(nameBytes, 46);
+
+    centralDirectory.push(cdh);
+    offset += lfh.length + size;
+  }
+
+  const cdhStart = offset;
+  let cdhSize = 0;
+  for (const cdh of centralDirectory) {
+    parts.push(cdh);
+    cdhSize += cdh.length;
+  }
+
+  // End of Central Directory (EOCD)
+  const eocd = new Uint8Array(22);
+  const eocdView = new DataView(eocd.buffer);
+
+  eocdView.setUint32(0, 0x06054b50, true);
+  eocdView.setUint16(4, 0, true);
+  eocdView.setUint16(6, 0, true);
+  eocdView.setUint16(8, files.length, true);
+  eocdView.setUint16(10, files.length, true);
+  eocdView.setUint32(12, cdhSize, true);
+  eocdView.setUint32(16, cdhStart, true);
+  eocdView.setUint16(20, 0, true);
+
+  parts.push(eocd);
+
+  return new Blob(parts, { type: "application/zip" });
 }
 
 $("btnCsv").addEventListener("click", async () => {
   download(await store.exportCSV({ use: USE }), "text/csv", "csv");
   statusLine.textContent = "CSV exported.";
 });
+
 $("btnJson").addEventListener("click", async () => {
-  const observations = await store.list({ use: USE, limit: 100000 });
-  const track = stream?.getVideoTracks?.()[0]?.getSettings?.() || {};
-  const session = {
-    schema: "lookout.count.session.v1",
-    session_id: sessionId, created_at_utc: new Date().toISOString(),
-    site_name: settings.name, view_type: settings.viewType,
-    camera: { facing: settings.facing, requested_fps: settings.targetFps, measured_fps: Math.round(fpsEMA * 10) / 10,
-      resolution: { width: track.width || null, height: track.height || null } },
-    data_policy: "observations-only (no images, no footage)",
-    counting: { mode: "line_crossing", direction_mode: settings.directionMode, sensitivity_threshold: settings.sensitivity, minimum_blob_area_px: settings.minSize, cooldown_ms: settings.cooldownMs, minimum_track_duration_ms: settings.minDurationMs },
-    geometry: { line: line ? { id: "main", a_norm: line.a, b_norm: line.b } : null, active_area: null, ignore_areas: [] },
-  };
-  download(JSON.stringify({ schema: "lookout.count.export.v1", exported_utc: new Date().toISOString(), session, observations: observations.reverse() }, null, 2), "application/json", "json");
-  statusLine.textContent = "JSON exported.";
+  try {
+    statusLine.textContent = "Preparing JSON export (including stills)...";
+    const observations = await store.list({ use: USE, limit: 100000 });
+    const mediaList = await store.listMedia({ use: USE, kind: "still", limit: 500 });
+    
+    const mediaMap = new Map(mediaList.map(m => [m.observation_id, m]));
+    const processedObs = [];
+    
+    for (const obs of observations) {
+      const copy = { ...obs };
+      const mediaRecord = mediaMap.get(obs.id);
+      if (mediaRecord && mediaRecord.blob) {
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(mediaRecord.blob);
+          });
+          copy.media = {
+            ...copy.media,
+            data_url: dataUrl
+          };
+        } catch (e) {
+          console.error("Failed to convert blob to data URL:", e);
+        }
+      }
+      processedObs.push(copy);
+    }
+
+    const track = stream?.getVideoTracks?.()[0]?.getSettings?.() || {};
+    const session = {
+      schema: "lookout.capture.session.v1",
+      session_id: sessionId, created_at_utc: new Date().toISOString(),
+      site_name: settings.name, view_type: settings.viewType,
+      camera: { facing: settings.facing, requested_fps: settings.targetFps, measured_fps: Math.round(fpsEMA * 10) / 10,
+        resolution: { width: track.width || null, height: track.height || null } },
+      data_policy: "observations + optional event stills, stored on-device; nothing shared unless exported",
+      counting: { mode: "line_crossing", direction_mode: settings.directionMode, sensitivity_threshold: settings.sensitivity, minimum_blob_area_px: settings.minSize, cooldown_ms: settings.cooldownMs, minimum_track_duration_ms: settings.minDurationMs },
+      geometry: { line: line ? { id: "main", a_norm: line.a, b_norm: line.b } : null, active_area: null, ignore_areas: [] },
+    };
+    
+    download(JSON.stringify({ 
+      schema: "lookout.capture.export.v1", 
+      exported_utc: new Date().toISOString(), 
+      session, 
+      observations: processedObs.reverse() 
+    }, null, 2), "application/json", "json");
+    
+    statusLine.textContent = "JSON exported.";
+  } catch (e) {
+    statusLine.textContent = "JSON export failed: " + e.message;
+  }
 });
+
+$("btnShareStills").addEventListener("click", async () => {
+  try {
+    statusLine.textContent = "Preparing stills for sharing...";
+    const records = await store.listMedia({ use: USE, kind: "still", limit: 500 });
+    if (!records.length) {
+      statusLine.textContent = "No stills captured.";
+      return;
+    }
+    const result = await shareOrDownloadMedia(records);
+    statusLine.textContent = result === "shared"
+      ? "Stills shared."
+      : result === "downloaded"
+        ? "Stills downloaded."
+        : result === "cancelled"
+          ? "Cancelled."
+          : "Done.";
+  } catch (e) {
+    statusLine.textContent = "Sharing failed: " + e.message;
+  }
+});
+
+$("btnShareBundle").addEventListener("click", async () => {
+  try {
+    statusLine.textContent = "Creating ZIP bundle...";
+    const observations = await store.list({ use: USE, limit: 100000 });
+    const mediaList = await store.listMedia({ use: USE, kind: "still", limit: 500 });
+    const csvText = await store.exportCSV({ use: USE });
+    
+    const track = stream?.getVideoTracks?.()[0]?.getSettings?.() || {};
+    const session = {
+      schema: "lookout.capture.session.v1",
+      session_id: sessionId, created_at_utc: new Date().toISOString(),
+      site_name: settings.name, view_type: settings.viewType,
+      camera: { facing: settings.facing, requested_fps: settings.targetFps, measured_fps: Math.round(fpsEMA * 10) / 10,
+        resolution: { width: track.width || null, height: track.height || null } },
+      data_policy: "observations + optional event stills, stored on-device; nothing shared unless exported",
+      counting: { mode: "line_crossing", direction_mode: settings.directionMode, sensitivity_threshold: settings.sensitivity, minimum_blob_area_px: settings.minSize, cooldown_ms: settings.cooldownMs, minimum_track_duration_ms: settings.minDurationMs },
+      geometry: { line: line ? { id: "main", a_norm: line.a, b_norm: line.b } : null, active_area: null, ignore_areas: [] },
+    };
+    const jsonText = JSON.stringify({ 
+      schema: "lookout.capture.export.v1", 
+      exported_utc: new Date().toISOString(), 
+      session, 
+      observations: observations.reverse() 
+    }, null, 2);
+
+    const files = [
+      { name: "observations.csv", data: new TextEncoder().encode(csvText) },
+      { name: "observations.json", data: new TextEncoder().encode(jsonText) }
+    ];
+
+    for (const media of mediaList) {
+      if (media.blob) {
+        const buffer = await media.blob.arrayBuffer();
+        files.push({ name: media.filename, data: new Uint8Array(buffer) });
+      }
+    }
+
+    const zipBlob = makeZip(files);
+    const zipName = `lookout-bundle-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+
+    const canCreateFile = typeof File !== "undefined";
+    const fileObj = canCreateFile ? new File([zipBlob], zipName, { type: zipBlob.type }) : null;
+    if (fileObj && navigator.canShare?.({ files: [fileObj] })) {
+      try {
+        await navigator.share({ files: [fileObj], title: zipName });
+        statusLine.textContent = "Bundle shared.";
+        return;
+      } catch (e) {
+        if (e.name === "AbortError") {
+          statusLine.textContent = "Cancelled.";
+          return;
+        }
+        console.warn("Share failed, downloading instead:", e);
+      }
+    }
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = zipName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    statusLine.textContent = "Bundle downloaded.";
+  } catch (e) {
+    statusLine.textContent = "Failed to bundle ZIP: " + e.message;
+  }
+});
+
+
 $("btnClear").addEventListener("click", async () => {
-  if (!confirm("Delete all local counting observations from this device?")) return;
+  if (!confirm("Delete all local observations and stills from this device?")) return;
   await store.clear({ use: USE });
   await store.clearMedia?.({ use: USE });
   totals = { aToB: 0, bToA: 0, total: 0, lastEvent: null };

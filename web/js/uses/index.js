@@ -6,6 +6,7 @@ import wildlife from "./wildlife.js";
 import environment from "./environment.js";
 import drones from "./drones.js";
 import security from "./security.js";
+import capture from "./capture.js";
 
-export { speed, count, dwell, wildlife, environment, drones, security };
+export { speed, count, dwell, wildlife, environment, drones, security, capture };
 export { listUses, getUse } from "../engine/use.js";

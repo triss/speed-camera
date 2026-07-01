@@ -86,7 +86,7 @@ truthy("describe: speed locate+measure are stubs",
 truthy("describe: every motion module has a source link",
   countMods.every((m) => typeof m.src === "string" && m.src.endsWith(".js")));
 truthy("describe: every use carries a config block",
-  ["count", "speed", "dwell", "wildlife", "environment"].every((id) => Object.keys(getUse(id).config || {}).length > 0));
+  ["count", "speed", "dwell", "wildlife", "environment", "capture"].every((id) => Object.keys(getUse(id).config || {}).length > 0));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

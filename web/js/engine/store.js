@@ -144,7 +144,7 @@ function createStore(db) {
       const observationId = await promisify(store.add(observation));
       let saved = { ...observation, id: observationId };
       if (media.still) {
-        const filename = `lookout-observation-${observationId}.jpg`;
+        const filename = media.filename || `lookout-observation-${observationId}.jpg`;
         const mediaStore = namedStore(db, MEDIA_STORE_NAME, "readwrite");
         const stillId = await promisify(mediaStore.add({
           observation_id: observationId,

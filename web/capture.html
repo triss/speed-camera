@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>lookout · count line crossings</title>
+  <title>lookout · count line crossings and capture stills</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/counting.css">
+  <link rel="stylesheet" href="css/capture.css">
   <script src="js/theme.js?v=settings-theme-only"></script>
 </head>
 <body class="page-counting">
@@ -35,6 +36,7 @@
     <div class="row">
       <button id="btnCamera" type="button" class="primary">Start camera</button>
       <button id="btnSwitch" class="small" type="button" disabled title="Switch camera">⇄ Camera</button>
+      <button id="btnViewStills" class="small" type="button" title="View Stills">🖼️ Stills</button>
     </div>
     <div class="row">
       <button id="btnDraw" type="button" disabled>Redraw line</button>
@@ -42,28 +44,23 @@
       <button id="btnSettings" type="button">Settings</button>
       <button id="btnExport" type="button">Share Data</button>
     </div>
-    <p id="status" role="status" aria-live="polite" class="status-line">Start the camera, place a line, and observing starts automatically. Counts crossings, not people.</p>
+    <p id="status" role="status" aria-live="polite" class="status-line">Start the camera, place a line, and observing starts automatically. Captures stills on crossing.</p>
   </footer>
 
   <!-- HELP / description sheet -->
   <section id="panelHelp" class="sheet" hidden aria-label="How this works">
     <div class="sheet-head"><h2>How this works</h2><button class="sheet-close" data-close>✕</button></div>
     <div class="sheet-body">
-      <p><strong>Count crossings, not people.</strong> lookout watches a fixed view, notices movement, and counts each time a moving blob crosses a line you draw. It stores timestamped <em>observations</em> — measurements only — on this device. No faces, no plates, no identity, no cloud, no continuous recording.</p>
-      <p>This can help estimate movement through a place: people entering or leaving a room, use of a doorway, footfall along a path, bikes passing a point, vehicles using a lane, or activity through a gate. It counts crossings of the line, so treat the result as a practical estimate rather than a perfect head count.</p>
-      <p>Set the phone somewhere stable with a clear view of the crossing point: a window ledge, shelf, tripod, or another support that will not wobble. Keep the lens clean, avoid reflections where possible, and leave the phone plugged in for longer observations.</p>
+      <p><strong>Capture and count crossings.</strong> lookout watches a fixed view, notices movement, and counts each time a moving blob crosses a line you draw. It stores timestamped <em>observations</em> and (if enabled) still JPEG images on this device. No cloud storage, no automated facial recognition, and no continuous footage leaves this phone.</p>
+      <p>This page expands on the basic counting tool by saving a snapshot of the camera at the exact moment a crossing is detected. You can review and page through these snapshots right in the browser using the <strong>Stills</strong> button.</p>
       <ol>
-        <li>Press <strong>Start camera</strong> and aim at a fixed spot. Line drawing starts automatically.</li>
-        <li>Use <strong>Switch camera</strong> for front/back if needed.</li>
-        <li>Tap two points to place your counting line across the path, doorway, road, or other crossing point.</li>
-        <li>After the line is positioned, do not move, rotate, or bump the phone. If the view changes, use <strong>Redraw line</strong> so the line matches the new camera position.</li>
-        <li>Open <strong>Settings</strong> to choose direction behaviour and sensitivity.</li>
-        <li>Once the line is placed, observing starts automatically. The main button becomes <strong>Stop observing</strong> while counting is active.</li>
-        <li>Open <strong>Share Data</strong> to save a CSV/JSON count log, or clear local data.</li>
+        <li>Press <strong>Start camera</strong> and aim at a stable spot.</li>
+        <li>Tap two points to draw your crossing line.</li>
+        <li>Once the line is placed, observing and capturing start automatically.</li>
+        <li>Press the <strong>Stills</strong> button in the bottom HUD at any time to browse, filter, or review captured images and their metadata.</li>
       </ol>
-      <p><strong>What is shared.</strong> Everything stays on this device. lookout stores <em>measurements only</em> — counts, timestamps and direction — never images or video. Nothing leaves the phone unless you tap <strong>Share Data</strong> to export a CSV or JSON count log. You can wipe everything at any time with <strong>Clear local observations</strong>.</p>
-      <p><strong>Fix common problems in Settings.</strong> If leaves, shadows, rain, or small background movement cause false counts, raise <em>Sensitivity threshold</em> or <em>Minimum size</em>. If the same person or vehicle is counted more than once, raise <em>Count cooldown</em>. If quick movement is missed, lower <em>Minimum track duration</em> or increase <em>Target FPS</em>. If the phone is struggling, lower <em>Target FPS</em> or <em>Resolution</em>.</p>
-      <p class="muted">The top bar shows measured fps. If the camera view or phone position changes, stop observing and redraw the line before trusting new counts.</p>
+      <p><strong>What is shared.</strong> Everything stays on this device. Measurements — counts, timestamps and direction — and, when enabled, a still image of each crossing are stored locally in the browser. Nothing leaves the phone automatically. When you tap <strong>Share Data</strong>, the CSV/JSON exports contain <em>measurements only</em>; the captured stills are included only if you explicitly choose <strong>Share Stills</strong> or <strong>Share Bundle</strong>. Turn image capture off any time with <strong>Capture still on crossing</strong> in Settings, and wipe everything with <strong>Clear local observations</strong>.</p>
+      <p class="muted">Stills are kept in the browser's IndexedDB storage. You can clear them at any time in the <strong>Share Data</strong> panel.</p>
     </div>
   </section>
 
@@ -71,6 +68,12 @@
   <section id="panelSettings" class="sheet" hidden aria-label="Settings">
     <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" data-close>✕</button></div>
     <div class="sheet-body">
+      <fieldset>
+        <legend>Capture Options</legend>
+        <label class="check"><input type="checkbox" id="setCaptureStills" checked> Capture still on crossing</label>
+        <p class="muted">Saves a still image of the camera view in IndexedDB when a line crossing occurs.</p>
+      </fieldset>
+
       <fieldset>
         <legend>Camera</legend>
         <label>Facing
@@ -103,12 +106,11 @@
       <fieldset>
         <legend>Scene</legend>
         <label>Observation name
-          <input type="text" id="setName" value="untitled_observation" autocomplete="off">
+          <input type="text" id="setName" value="untitled_capture" autocomplete="off">
         </label>
         <label>View type
           <select id="setViewType"><option>path</option><option>doorway</option><option>road</option><option>garden</option><option selected>other</option></select>
         </label>
-        <p class="muted">Active area is the whole frame in this version. Ignore masks (trees, flags, reflections) are planned.</p>
       </fieldset>
 
       <fieldset>
@@ -126,14 +128,12 @@
             <input id="setSensitivity" type="range" min="8" max="48" step="1" value="24">
             <input id="setSensitivityNumber" type="number" min="8" max="48" step="1" value="24" inputmode="numeric" aria-label="Sensitivity threshold">
           </span>
-          <span class="muted">Lower numbers notice smaller changes; higher numbers ignore more noise.</span>
         </label>
         <label class="number-control">Minimum size
           <span class="number-row">
             <input id="setMinSize" type="range" min="1" max="80" step="1" value="14">
             <input id="setMinSizeNumber" type="number" min="1" max="80" step="1" value="14" inputmode="numeric" aria-label="Minimum blob size">
           </span>
-          <span class="muted">Minimum moving blob area, in processing pixels.</span>
         </label>
         <label class="number-control">Minimum track duration (ms)
           <span class="number-row">
@@ -171,14 +171,50 @@
       <div class="row wrap">
         <button id="btnCsv" type="button">Share CSV</button>
         <button id="btnJson" type="button">Share JSON</button>
+        <button id="btnShareStills" type="button" disabled>Share Stills</button>
+        <button id="btnShareBundle" type="button" disabled>Share Bundle (ZIP)</button>
       </div>
       <button id="btnClear" type="button" class="danger">Clear local observations</button>
-      <p class="muted">Shares measurements only — counts, times and direction. No images or video are ever stored or shared.</p>
+      <p class="muted">CSV/JSON contain measurements only. Captured stills stay on this device and are only included when you use <strong>Share Stills</strong> or <strong>Share Bundle</strong>. Nothing is ever uploaded automatically.</p>
     </div>
   </section>
 
+  <!-- STILLS GALLERY / VIEWER -->
+  <div id="viewerContainer" class="fullscreen-viewer" hidden>
+    <div class="viewer-header">
+      <button id="btnViewerBack" class="viewer-btn">← Back</button>
+      <span id="viewerTitle">Captured Stills</span>
+      <button id="btnToggleMetadata" class="viewer-btn">Hide Info</button>
+    </div>
+    
+    <div class="viewer-body">
+      <div id="viewerImageContainer">
+        <img id="viewerImg" alt="Captured event still" src="" />
+        
+        <!-- Hidable Metadata Overlay -->
+        <div id="viewerMetadata" class="viewer-metadata">
+          <div class="meta-row"><strong>Time:</strong> <span id="metaTime"></span></div>
+          <div class="meta-row"><strong>Direction:</strong> <span id="metaDirection"></span></div>
+          <div class="meta-row"><strong>Track ID:</strong> <span id="metaTrackId"></span></div>
+          <div class="meta-row"><strong>Duration:</strong> <span id="metaDuration"></span></div>
+          <div class="meta-row"><strong>Confidence:</strong> <span id="metaConfidence"></span></div>
+          <div class="meta-row"><strong>Session:</strong> <span id="metaSession"></span></div>
+        </div>
+      </div>
+      
+      <!-- Empty state -->
+      <div id="viewerEmpty" hidden>No stills captured yet.</div>
+    </div>
+    
+    <div class="viewer-footer">
+      <button id="btnViewerPrev" class="viewer-btn">◀ Previous</button>
+      <span id="viewerPageNum">0 of 0</span>
+      <button id="btnViewerNext" class="viewer-btn">Next ▶</button>
+    </div>
+  </div>
+
   <div id="scrim" hidden></div>
 
-  <script type="module" src="js/counting/app.js"></script>
+  <script type="module" src="js/capture/app.js"></script>
 </body>
 </html>
