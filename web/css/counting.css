@@ -82,7 +82,6 @@ html, body.page-counting {
 }
 .chip b { font-variant-numeric: tabular-nums; }
 .chip-total { background: var(--surface-2); font-weight: 700; }
-.badge-local { color: var(--pass-fg); }
 .chip-warn { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn-fg); }
 
 /* HUD buttons */
@@ -102,6 +101,7 @@ html, body.page-counting {
 #hudBottom button.primary { background: var(--accent); color: #06121f; border-color: var(--accent); }
 #hudBottom button.go { background: var(--ok-bg); border-color: var(--ok-bd); color: var(--pass-fg); }
 #hudBottom button.go.observing { background: var(--fail-bg); border-color: var(--fail-bd); color: var(--fail-fg); }
+#hudBottom button.small { flex: 0 0 auto; min-width: 5.5rem; }
 .status-line { margin: 0; font-size: .82rem; color: var(--muted); }
 
 /* Sliding sheets */

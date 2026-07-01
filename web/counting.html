@@ -26,7 +26,6 @@
       <span class="chip"><b id="cFps">–</b> fps</span>
     </div>
     <div class="chips right">
-      <span class="chip badge-local" title="Nothing leaves this device automatically">🔒 local only</span>
       <span id="warnBattery" class="chip chip-warn" hidden></span>
       <span id="warnDisk" class="chip chip-warn" hidden></span>
     </div>
@@ -37,12 +36,11 @@
     <div class="row">
       <button id="btnCamera" type="button" class="primary">Start camera</button>
       <button id="btnObserve" type="button" class="go" disabled>Start observing</button>
-      <button id="btnSwitch" type="button" disabled title="Switch camera">⇄ Camera</button>
+      <button id="btnSwitch" class="small" type="button" disabled title="Switch camera">⇄ Camera</button>
     </div>
     <div class="row">
       <button id="btnDraw" type="button" disabled>Draw line</button>
-      <button id="btnFlip" type="button" disabled>Flip A/B</button>
-      <button id="btnClearLine" type="button" disabled>Clear line</button>
+      <button id="btnFlip" type="button" disabled>Swap A/B sides</button>
       <button id="btnHelp" type="button">How it works</button>
       <button id="btnSettings" type="button">Settings</button>
       <button id="btnExport" type="button">Export</button>
@@ -58,7 +56,7 @@
       <ol>
         <li>Press <strong>Start camera</strong> and aim at a fixed spot.</li>
         <li>Use <strong>Switch camera</strong> for front/back if needed.</li>
-        <li>Press <strong>Draw line</strong>, then tap two points to place your counting line. The two sides are labelled <b>A</b> and <b>B</b>.</li>
+        <li>Press <strong>Draw line</strong>, then tap two points to place your counting line. Drawing a new line replaces the old one. The two sides are labelled <b>A</b> and <b>B</b>; use <strong>Swap A/B sides</strong> if you want the direction names reversed.</li>
         <li>Open <strong>Settings</strong> to choose direction behaviour, sensitivity, and privacy mode.</li>
         <li>Press <strong>Start observing</strong>. Crossings are counted live.</li>
         <li>Open <strong>Export</strong> to save a CSV/JSON count log, or clear local data.</li>

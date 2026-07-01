@@ -38,6 +38,7 @@ let line = null; // { a:{x,y}, b:{x,y} } in intrinsic-frame normalised coords
 let drawMode = false, pendingA = null;
 let totals = { aToB: 0, bToA: 0, total: 0, lastEvent: null };
 let lastProcT = 0, fpsEMA = 0, rafId = 0;
+let flashes = [];
 
 // ── Cover-fit mapping between screen pixels and the video's intrinsic frame ──
 function coverMap() {
@@ -79,7 +80,7 @@ async function startCamera() {
   camHint.hidden = true;
   $("btnCamera").textContent = "Stop camera";
   $("btnCamera").classList.remove("primary");
-  for (const id of ["btnObserve", "btnSwitch", "btnDraw", "btnFlip", "btnClearLine"]) $(id).disabled = false;
+  for (const id of ["btnObserve", "btnSwitch", "btnDraw", "btnFlip"]) $(id).disabled = false;
   refreshObserveEnabled();
   resizeOverlay();
   statusLine.textContent = line ? "Ready. Press Start observing." : "Press Draw line, then place your counting line.";
@@ -99,7 +100,7 @@ function stopCamera() {
   $("btnCamera").textContent = "Start camera";
   $("btnCamera").classList.add("primary");
   setObserveButton(false);
-  for (const id of ["btnObserve", "btnSwitch", "btnDraw", "btnFlip", "btnClearLine"]) $(id).disabled = true;
+  for (const id of ["btnObserve", "btnSwitch", "btnDraw", "btnFlip"]) $(id).disabled = true;
 }
 
 // ── Overlay sizing ──────────────────────────────────────────────────────────
@@ -167,6 +168,7 @@ async function recordCrossing(tr, dir, t) {
   $("cTotal").textContent = totals.total;
   $("cAB").textContent = totals.aToB;
   $("cBA").textContent = totals.bToA;
+  flashes.push({ dir, t: performance.now() });
   const confidence = Math.min(1, tr.framesSeen / 12);
   const obs = {
     use: USE, t,
@@ -196,7 +198,8 @@ function render(tracks) {
     const sa = frameToScreen(a), sb = frameToScreen(b);
     dctx.strokeStyle = "#ffd166"; dctx.lineWidth = 3;
     dctx.beginPath(); dctx.moveTo(sa.x, sa.y); dctx.lineTo(sb.x, sb.y); dctx.stroke();
-    label("A", sa); label("B", sb);
+    drawSideLabels(a, b);
+    drawCrossingFlashes(a, b, performance.now());
   } else if (a) {
     const sa = frameToScreen(a);
     dctx.fillStyle = "#ffd166"; dctx.beginPath(); dctx.arc(sa.x, sa.y, 6, 0, Math.PI * 2); dctx.fill();
@@ -207,6 +210,56 @@ function label(text, p) {
   dctx.fillStyle = "#101214"; dctx.font = "bold 13px system-ui"; dctx.textAlign = "center"; dctx.textBaseline = "middle";
   dctx.fillText(text, p.x, p.y);
   dctx.textAlign = "start"; dctx.textBaseline = "alphabetic";
+}
+function sideLabelPositions(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  const offset = 0.12;
+  return {
+    a: frameToScreen({ x: mx + (-dy / len) * offset, y: my + (dx / len) * offset }),
+    b: frameToScreen({ x: mx - (-dy / len) * offset, y: my - (dx / len) * offset }),
+  };
+}
+function drawSideLabels(a, b) {
+  const p = sideLabelPositions(a, b);
+  label("A", p.a);
+  label("B", p.b);
+}
+function drawArrow(from, to, alpha) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const head = 18;
+  dctx.save();
+  dctx.globalAlpha = alpha;
+  dctx.strokeStyle = "#8af2b0";
+  dctx.fillStyle = "#8af2b0";
+  dctx.lineWidth = 7;
+  dctx.lineCap = "round";
+  dctx.beginPath();
+  dctx.moveTo(from.x, from.y);
+  dctx.lineTo(to.x, to.y);
+  dctx.stroke();
+  dctx.beginPath();
+  dctx.moveTo(to.x, to.y);
+  dctx.lineTo(to.x - ux * head - uy * head * .55, to.y - uy * head + ux * head * .55);
+  dctx.lineTo(to.x - ux * head + uy * head * .55, to.y - uy * head - ux * head * .55);
+  dctx.closePath();
+  dctx.fill();
+  dctx.restore();
+}
+function drawCrossingFlashes(a, b, now) {
+  const lifetime = 900;
+  flashes = flashes.filter((flash) => now - flash.t < lifetime);
+  const p = sideLabelPositions(a, b);
+  for (const flash of flashes) {
+    const age = now - flash.t;
+    const alpha = Math.max(0, 1 - age / lifetime);
+    const from = flash.dir === "A_to_B" ? p.a : p.b;
+    const to = flash.dir === "A_to_B" ? p.b : p.a;
+    drawArrow(from, to, alpha);
+  }
 }
 
 // ── Line drawing ────────────────────────────────────────────────────────────
@@ -243,16 +296,14 @@ $("btnObserve").addEventListener("click", () => {
   $("sessionId").textContent = sessionId || "–";
 });
 $("btnDraw").addEventListener("click", () => {
+  line = null;
+  if (observing) { observing = false; setObserveButton(false); }
   drawMode = true; pendingA = null; draw.classList.add("drawing");
+  refreshObserveEnabled();
   statusLine.textContent = "Tap point A of the counting line.";
 });
 $("btnFlip").addEventListener("click", () => {
-  if (line) { line = { a: line.b, b: line.a }; statusLine.textContent = "Flipped A/B."; }
-});
-$("btnClearLine").addEventListener("click", () => {
-  line = null; pendingA = null; drawMode = false; refreshObserveEnabled();
-  if (observing) { observing = false; setObserveButton(false); }
-  statusLine.textContent = "Line cleared. Draw a new one.";
+  if (line) { line = { a: line.b, b: line.a }; statusLine.textContent = "A/B sides swapped."; }
 });
 
 function setObserveButton(on) {
