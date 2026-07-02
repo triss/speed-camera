@@ -8,6 +8,8 @@ import { crossingDirection, countsForMode } from "../counting/crossing.js";
 import { makeZip } from "../tools/zip.js";
 import { shareOrDownloadMedia } from "../tools/share.js";
 import { openObservationStore } from "../engine/store.js";
+import { createCoverMapper } from "../tools/cover-map.js";
+import { createSettingsBinder } from "../tools/settings.js";
 import { initWarnings } from "../tools/warnings.js";
 
 const USE = "capture";
@@ -56,25 +58,11 @@ let viewerIndex = 0;
 let metadataVisible = true;
 let currentImageUrl = null;
 
-// ── Cover-fit mapping between screen pixels and the video's intrinsic frame ──
-function coverMap() {
-  const vw = cam.videoWidth || 16, vh = cam.videoHeight || 9;
-  const dw = draw.clientWidth, dh = draw.clientHeight;
-  const scale = Math.max(dw / vw, dh / vh);
-  const w = vw * scale, h = vh * scale;
-  return { ox: (dw - w) / 2, oy: (dh - h) / 2, w, h, mir: settings.mirror };
-}
-function screenToFrame(sx, sy) {
-  const m = coverMap();
-  let x = (sx - m.ox) / m.w;
-  if (m.mir) x = 1 - x;
-  return { x, y: (sy - m.oy) / m.h };
-}
-function frameToScreen(p) {
-  const m = coverMap();
-  let fx = m.mir ? 1 - p.x : p.x;
-  return { x: m.ox + fx * m.w, y: m.oy + p.y * m.h };
-}
+const { screenToFrame, frameToScreen } = createCoverMapper({
+  video: cam,
+  overlay: draw,
+  getMirror: () => settings.mirror,
+});
 
 // ── Camera ─────────────────────────────────────────────────────────────────
 async function startCamera({ drawLineAfterStart = false } = {}) {
@@ -440,44 +428,31 @@ $("scrim").addEventListener("click", closeSheets);
 for (const btn of document.querySelectorAll("[data-close]")) btn.addEventListener("click", closeSheets);
 
 // Settings bindings
-const bind = (id, key, fn = (v) => v) => $(id).addEventListener("change", (e) => {
-  const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-  settings[key] = fn(v);
-  if ((key === "resolution" || key === "facing" || key === "targetFps") && cameraOn) startCamera();
-  if (key === "mirror") cam.classList.toggle("mirror", settings.mirror);
-  if (key === "maxLost") tracker = createMultiTracker({ maxLost: settings.maxLost });
+const { bind, bindNumberPair } = createSettingsBinder({
+  $,
+  settings,
+  onChange: ({ key }) => {
+    if ((key === "resolution" || key === "facing" || key === "targetFps") && cameraOn) startCamera();
+    if (key === "mirror") cam.classList.toggle("mirror", settings.mirror);
+    if (key === "maxLost") tracker = createMultiTracker({ maxLost: settings.maxLost });
+  },
 });
-function bindNumberPair(rangeId, numberId, key, onCommit = () => {}) {
-  const range = $(rangeId);
-  const number = $(numberId);
-  const min = Number(number.min);
-  const max = Number(number.max);
-  const set = (raw, commit = false) => {
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return;
-    const value = Math.min(max, Math.max(min, parsed));
-    settings[key] = value;
-    range.value = value;
-    number.value = value;
-    if (commit) onCommit();
-  };
-  range.addEventListener("input", (e) => set(e.target.value));
-  range.addEventListener("change", (e) => set(e.target.value, true));
-  number.addEventListener("input", (e) => set(e.target.value));
-  number.addEventListener("change", (e) => set(e.target.value, true));
-}
 bind("setFacing", "facing"); bind("setResolution", "resolution");
 bind("setMirror", "mirror");
 bind("setName", "name"); bind("setViewType", "viewType");
 bind("setDirection", "directionMode");
 bind("setCaptureStills", "captureStills"); // Capture toggle binding!
-bindNumberPair("setFps", "setFpsNumber", "targetFps", () => { if (cameraOn) startCamera(); });
+bindNumberPair("setFps", "setFpsNumber", "targetFps", {
+  onCommit: () => { if (cameraOn) startCamera(); },
+});
 bindNumberPair("setSensitivity", "setSensitivityNumber", "sensitivity");
 bindNumberPair("setMinSize", "setMinSizeNumber", "minSize");
 bindNumberPair("setMinDuration", "setMinDurationNumber", "minDurationMs");
 bindNumberPair("setCooldown", "setCooldownNumber", "cooldownMs");
-bindNumberPair("setMaxLost", "setMaxLostNumber", "maxLost", () => {
-  tracker = createMultiTracker({ maxLost: settings.maxLost });
+bindNumberPair("setMaxLost", "setMaxLostNumber", "maxLost", {
+  onCommit: () => {
+    tracker = createMultiTracker({ maxLost: settings.maxLost });
+  },
 });
 
 // ── Stills Viewer Controller ─────────────────────────────────────────────

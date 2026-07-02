@@ -8,6 +8,8 @@ import { pickMotionEvent } from "../tools/motion-trigger.js";
 import { makeZip } from "../tools/zip.js";
 import { shareOrDownloadMedia } from "../tools/share.js";
 import { openObservationStore } from "../engine/store.js";
+import { createCoverMapper } from "../tools/cover-map.js";
+import { createSettingsBinder } from "../tools/settings.js";
 import { initWarnings } from "../tools/warnings.js";
 
 const USE = "security";
@@ -67,22 +69,11 @@ function removeFloatingThemePicker() {
   if (floatingThemePicker) floatingThemePicker.remove();
 }
 
-function coverMap() {
-  const vw = cam.videoWidth || 16;
-  const vh = cam.videoHeight || 9;
-  const dw = draw.clientWidth;
-  const dh = draw.clientHeight;
-  const scale = Math.max(dw / vw, dh / vh);
-  const w = vw * scale;
-  const h = vh * scale;
-  return { ox: (dw - w) / 2, oy: (dh - h) / 2, w, h, mir: settings.mirror };
-}
-
-function frameToScreen(p) {
-  const m = coverMap();
-  const fx = m.mir ? 1 - p.x : p.x;
-  return { x: m.ox + fx * m.w, y: m.oy + p.y * m.h };
-}
+const { frameToScreen } = createCoverMapper({
+  video: cam,
+  overlay: draw,
+  getMirror: () => settings.mirror,
+});
 
 async function startCamera() {
   stopStream();
@@ -339,33 +330,15 @@ $("btnExport").addEventListener("click", async () => { await refreshExportPanel(
 $("scrim").addEventListener("click", closeSheets);
 for (const btn of document.querySelectorAll("[data-close]")) btn.addEventListener("click", closeSheets);
 
-const bind = (id, key, fn = (v) => v) => $(id).addEventListener("change", (e) => {
-  const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-  settings[key] = fn(v);
-  if ((key === "resolution" || key === "facing") && cameraOn) startCamera();
-  if (key === "mirror") cam.classList.toggle("mirror", settings.mirror);
-  if (key === "showOverlay") render([]);
+const { bind, bindNumberPair } = createSettingsBinder({
+  $,
+  settings,
+  onChange: ({ key }) => {
+    if ((key === "resolution" || key === "facing") && cameraOn) startCamera();
+    if (key === "mirror") cam.classList.toggle("mirror", settings.mirror);
+    if (key === "showOverlay") render([]);
+  },
 });
-
-function bindNumberPair(rangeId, numberId, key, onCommit = () => {}) {
-  const range = $(rangeId);
-  const number = $(numberId);
-  const min = Number(number.min);
-  const max = Number(number.max);
-  const set = (raw, commit = false) => {
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return;
-    const value = Math.min(max, Math.max(min, parsed));
-    settings[key] = value;
-    range.value = value;
-    number.value = value;
-    if (commit) onCommit();
-  };
-  range.addEventListener("input", (e) => set(e.target.value));
-  range.addEventListener("change", (e) => set(e.target.value, true));
-  number.addEventListener("input", (e) => set(e.target.value));
-  number.addEventListener("change", (e) => set(e.target.value, true));
-}
 
 bind("setFacing", "facing");
 bind("setResolution", "resolution");
@@ -379,8 +352,10 @@ bindNumberPair("setSensitivity", "setSensitivityNumber", "sensitivity");
 bindNumberPair("setMinSize", "setMinSizeNumber", "minSize");
 bindNumberPair("setMinDuration", "setMinDurationNumber", "minDurationMs");
 bindNumberPair("setCooldown", "setCooldownNumber", "cooldownMs");
-bindNumberPair("setMaxLost", "setMaxLostNumber", "maxLost", () => {
-  tracker = createMultiTracker({ maxLost: settings.maxLost });
+bindNumberPair("setMaxLost", "setMaxLostNumber", "maxLost", {
+  onCommit: () => {
+    tracker = createMultiTracker({ maxLost: settings.maxLost });
+  },
 });
 
 async function enterViewer() {

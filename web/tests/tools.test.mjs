@@ -2,6 +2,8 @@
 // Run:  node web/tests/tools.test.mjs
 import { pickMotionEvent } from "../js/tools/motion-trigger.js";
 import { clipEventAction, shouldFinalizeClip } from "../js/tools/clip-series.js";
+import { coverMap, frameToScreenPoint, screenToFramePoint } from "../js/tools/cover-map.js";
+import { createSettingsBinder } from "../js/tools/settings.js";
 import { makeZip } from "../js/tools/zip.js";
 
 let pass = 0, fail = 0;
@@ -52,6 +54,66 @@ ok("zip: local file header signature (PK\\x03\\x04)",
 ok("zip: contains the entry name", zipText.includes("a.txt"));
 ok("zip: stores the file data uncompressed", zipText.includes("hello"));
 ok("zip: has end-of-central-directory record", zipText.includes("PK\x05\x06"));
+
+// cover-map
+const map = coverMap({ videoWidth: 640, videoHeight: 480, drawWidth: 320, drawHeight: 320 });
+ok("cover: fills square by height", map.w === 426.66666666666663 && map.h === 320);
+ok("cover: centers cropped width", Math.round(map.ox) === -53 && map.oy === 0);
+const screen = frameToScreenPoint({ x: 0.5, y: 0.5 }, map);
+ok("cover: frame center maps to screen center", Math.round(screen.x) === 160 && Math.round(screen.y) === 160);
+const frame = screenToFramePoint(screen.x, screen.y, map);
+ok("cover: screen center maps back to frame center", frame.x === 0.5 && frame.y === 0.5);
+const mirrored = coverMap({ videoWidth: 100, videoHeight: 100, drawWidth: 100, drawHeight: 100, mirror: true });
+ok("cover: mirror flips x from frame to screen", frameToScreenPoint({ x: 0.25, y: 0.5 }, mirrored).x === 75);
+ok("cover: mirror flips x from screen to frame", screenToFramePoint(75, 50, mirrored).x === 0.25);
+
+// settings binder
+function fakeInput({ value = "", type = "text", min = "", max = "" } = {}) {
+  const listeners = {};
+  return {
+    value,
+    type,
+    min,
+    max,
+    checked: false,
+    addEventListener(name, fn) {
+      listeners[name] = listeners[name] || [];
+      listeners[name].push(fn);
+    },
+    dispatch(name) {
+      for (const fn of listeners[name] || []) fn({ target: this });
+    },
+  };
+}
+const controls = {
+  checkbox: fakeInput({ type: "checkbox" }),
+  range: fakeInput({ value: "5", min: "1", max: "10" }),
+  number: fakeInput({ value: "5", min: "1", max: "10" }),
+};
+const boundSettings = {};
+const changes = [];
+const binder = createSettingsBinder({
+  $: (id) => controls[id],
+  settings: boundSettings,
+  onChange: (change) => changes.push(change),
+});
+binder.bind("checkbox", "enabled");
+controls.checkbox.checked = true;
+controls.checkbox.dispatch("change");
+ok("settings: bind writes checkbox boolean", boundSettings.enabled === true);
+ok("settings: bind calls onChange", changes[0]?.key === "enabled" && changes[0]?.value === true);
+let committed = null;
+binder.bindNumberPair("range", "number", "delayMs", {
+  transform: (value) => value * 1000,
+  onCommit: (change) => { committed = change; },
+});
+controls.range.value = "12";
+controls.range.dispatch("input");
+ok("settings: number pair clamps and transforms", boundSettings.delayMs === 10000);
+ok("settings: number pair syncs controls", controls.range.value === 10 && controls.number.value === 10);
+controls.number.value = "2";
+controls.number.dispatch("change");
+ok("settings: number pair commits on change", committed?.key === "delayMs" && committed?.value === 2000);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
